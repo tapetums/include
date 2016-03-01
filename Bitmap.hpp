@@ -297,7 +297,8 @@ inline bool tapetums::Bitmap::Load(UINT16 rsrcId, HMODULE hInst)
 
 inline bool tapetums::Bitmap::Load(LPCWSTR filename)
 {
-    File file
+    File file;
+    file.Open
     (
         filename, File::ACCESS::READ, File::SHARE::READ, File::OPEN::EXISTING
     );
@@ -347,7 +348,8 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
 
 inline bool tapetums::Bitmap::Save(LPCWSTR filename)
 {
-    File file
+    File file;
+    file.Open
     (
         filename, File::ACCESS::WRITE, File::SHARE::READ, File::OPEN::OR_CREATE
     );
