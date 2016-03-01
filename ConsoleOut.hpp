@@ -36,8 +36,6 @@
 #include <windows.h>
 #include <strsafe.h>
 
-#include "Lock.hpp"
-
 //---------------------------------------------------------------------------//
 // 定数
 //---------------------------------------------------------------------------//
@@ -48,6 +46,8 @@ constexpr size_t CONSOLE_BUFSIZE = 1024;
 //---------------------------------------------------------------------------//
 // 排他ロック
 //---------------------------------------------------------------------------//
+
+#include "Lock.hpp"
 
 struct lock
 {
@@ -81,7 +81,7 @@ inline void console_outA(const char* format, ...)
     ::StringCchPrintfA
     (
         time.data(), time.size(),
-        "*%04x %02u:%02u:%02u;%03u> ", threadId,
+        "[%08x] %02u:%02u:%02u;%03u> ", threadId,
         st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
     );
 
@@ -125,7 +125,7 @@ inline void console_outW(const wchar_t* format, ...)
     ::StringCchPrintfW
     (
         time.data(), time.size(),
-        L"*%04x %02u:%02u:%02u;%03u> ", threadId,
+        L"[%08x] %02u:%02u:%02u;%03u> ", threadId,
         st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
     );
 
