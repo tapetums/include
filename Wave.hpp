@@ -10,8 +10,6 @@
 
 #include <cstdint>
 
-#include <vector>
-
 #include <windows.h>
 #include <mmreg.h>
 
@@ -19,6 +17,7 @@
 #include "File.hpp"
 #include "GenerateUUIDString.hpp"
 
+#pragma warning(push)
 #pragma warning(disable: 4815)
 
 //---------------------------------------------------------------------------//
@@ -28,6 +27,7 @@
 namespace tapetums
 {
     class Wave;
+    inline uint32_t MaskChannelMask(uint16_t channels);
 }
 
 //---------------------------------------------------------------------------//
@@ -39,7 +39,8 @@ class tapetums::Wave
 private:
     File file;
 
-    uint8_t* fmt_offset  { nullptr };
+    WAVEFORMATEXTENSIBLE wfex { };
+
     uint8_t* data_offset { nullptr };
 
     int64_t  data_size    { 0 };
@@ -54,19 +55,23 @@ public:
     Wave(const Wave&)             = delete;
     Wave& operator =(const Wave&) = delete;
 
-    Wave(Wave&&)             noexcept = delete;
-    Wave& operator =(Wave&&) noexcept = delete;
+    Wave(Wave&& rhs)             noexcept { swap(std::move(rhs)); }
+    Wave& operator =(Wave&& rhs) noexcept { swap(std::move(rhs)); return *this; }
 
 public:
-    auto format() const noexcept { return fmt_offset ? (WAVEFORMATEXTENSIBLE*)(fmt_offset) : nullptr; }
+    void swap(Wave&& rhs);
+
+public:
+    auto format() const noexcept { return (const WAVEFORMATEXTENSIBLE*)&wfex; }
     auto size()   const noexcept { return data_size; }
-    auto data()   const noexcept { return data_offset; }
+    auto data()   const noexcept { return (const uint8_t*)data_offset; }
+    auto data()   noexcept       { return data_offset; }
 
 public:
-    bool Create(LPCWSTR path, WAVEFORMATEXTENSIBLE& format, int64_t data_size);
+    bool Create (LPCWSTR path, WAVEFORMATEXTENSIBLE& format, int64_t data_size);
     void Dispose();
-    bool Load(LPCWSTR path);
-    bool Save(LPCWSTR path);
+    bool Load   (LPCWSTR path);
+    bool Save   (LPCWSTR path);
 
 private:
     bool ReadAllChunks      ();
@@ -74,49 +79,22 @@ private:
     bool ReadFormatChunk    (uint8_t* p);
     void ReadDataSize64Chunk(uint8_t* p, uint32_t chunkSize);
 
-    uint8_t* ForwardPointer(uint8_t* p, const char chunkId[4], uint32_t chunkSize);
+    uint8_t* ForwardPointer (uint8_t* p, const char chunkId[4], uint32_t chunkSize);
     int64_t  LookUpSizeTable(const char chunkId[4]);
 };
 
 //---------------------------------------------------------------------------//
-// Utility Function
+// ムーブコンストラクタ
 //---------------------------------------------------------------------------//
 
-uint32_t __stdcall MaskChannelMask(uint16_t channels)
+inline void tapetums::Wave::swap(Wave&& rhs)
 {
-    switch ( channels )
-    {
-        case 1: // monaural
-        {
-            return SPEAKER_FRONT_CENTER;
-        }
-        case 2: // stereo
-        {
-            return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-        }
-        case 4: // 4 way
-        {
-            return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT |
-                   SPEAKER_BACK_LEFT  | SPEAKER_BACK_RIGHT;
-        }
-        case 6: // 5.1 ch
-        {
-            return SPEAKER_FRONT_LEFT   | SPEAKER_FRONT_RIGHT   |
-                   SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
-                   SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT;
-        }
-        case 8: // 7.1 ch
-        {
-            return SPEAKER_FRONT_LEFT   | SPEAKER_FRONT_RIGHT   |
-                   SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
-                   SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT    |
-                   SPEAKER_SIDE_LEFT    | SPEAKER_SIDE_RIGHT;
-        }
-        default:
-        {
-            return 0;
-        }
-    }
+    std::swap(file,         rhs.file);
+    std::swap(wfex,         rhs.wfex);
+    std::swap(data_offset,  rhs.data_offset);
+    std::swap(data_size,    rhs.data_size);
+    std::swap(table_length, rhs.table_length);
+    std::swap(table_ds64,   rhs.table_ds64);
 }
 
 //---------------------------------------------------------------------------//
@@ -128,15 +106,13 @@ inline bool tapetums::Wave::Create
     LPCWSTR path, WAVEFORMATEXTENSIBLE& format, int64_t size
 )
 {
-    if ( size >= UINT32_MAX && format.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE )
-    {
-        return false; // そんなムチャな
-    }
-
     if ( file.is_mapped() ) { Dispose(); }
 
-    // ファイルサイズの計算
+    // メンバ変数に保存
+    wfex      = format;
     data_size = size;
+
+    // ファイルサイズの計算
     const auto riffSize = sizeof(RiffChunk) +
                           sizeof(DataSize64Chunk) +
                           sizeof(FormatExtensibleChunk) +
@@ -148,7 +124,7 @@ inline bool tapetums::Wave::Create
     {
         // メモリ上に生成
         wchar_t uuid [40];
-        GenerateUUIDStringW(uuid, 40);
+        GenerateUUIDStringW(uuid, 40); // ランダムな名前を生成
         file.Map(riffSize, uuid, File::ACCESS::WRITE);
     }
     else
@@ -204,7 +180,6 @@ inline bool tapetums::Wave::Create
     fmt.chunkSize = sizeof(fmt) - 8;
     ::memcpy(&fmt.formatType, &format.Format.wFormatTag, sizeof(format));
 
-    fmt_offset = file.pointer() + 8;
     file.Write(fmt);
 
     DataChunk data;
@@ -223,7 +198,10 @@ inline void tapetums::Wave::Dispose()
 {
     if ( table_ds64 ) { delete[] table_ds64; table_ds64 = nullptr; }
 
-    fmt_offset = data_offset = nullptr;
+    data_size = table_length = 0;
+    data_offset = nullptr;
+
+    ::memset(&wfex, 0, sizeof(wfex));
 
     file.Close();
 
@@ -234,6 +212,8 @@ inline void tapetums::Wave::Dispose()
 
 inline bool tapetums::Wave::Load(LPCWSTR path)
 {
+    if ( file.is_mapped() ) { return false; }
+
     file.Open(path, File::ACCESS::WRITE, File::SHARE::WRITE, File::OPEN::EXISTING);
     if ( ! file.is_open() )
     {
@@ -255,14 +235,23 @@ inline bool tapetums::Wave::Load(LPCWSTR path)
 
 inline bool tapetums::Wave::Save(LPCWSTR path)
 {
+    if ( ! file.is_mapped() ) { return false; }
+
     file.Seek(0);
 
-    File tmp(path, File::ACCESS::WRITE, File::SHARE::WRITE, File::OPEN::OR_TRUNCATE);
+    File tmp;
+    tmp.Open
+    (
+        path, File::ACCESS::WRITE, File::SHARE::WRITE, File::OPEN::OR_TRUNCATE
+    );
+
     tmp.Write(file.pointer(), size_t(file.size()));
 
     return true;
 }
 
+//---------------------------------------------------------------------------//
+// 内部メソッド
 //---------------------------------------------------------------------------//
 
 inline bool tapetums::Wave::ReadAllChunks()
@@ -366,11 +355,11 @@ inline bool tapetums::Wave::ReadFormatChunk(uint8_t* p)
 
     if ( tag == WAVE_FORMAT_PCM || tag == WAVE_FORMAT_IEEE_FLOAT )
     {
-        fmt_offset = p;
+        memcpy(&wfex, p, sizeof(PCMWAVEFORMAT));
     }
     else if ( tag == WAVE_FORMAT_EXTENSIBLE )
     {
-        fmt_offset = p;
+        memcpy(&wfex, p, sizeof(WAVEFORMATEXTENSIBLE));
     }
     else
     {
@@ -452,5 +441,48 @@ inline int64_t tapetums::Wave::LookUpSizeTable(const char chunkId[4])
 }
 
 //---------------------------------------------------------------------------//
+// ユーティリティ関数
+//---------------------------------------------------------------------------//
+
+inline uint32_t tapetums::MaskChannelMask(uint16_t channels)
+{
+    switch ( channels )
+    {
+        case 1: // monaural
+        {
+            return SPEAKER_FRONT_CENTER;
+        }
+        case 2: // stereo
+        {
+            return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+        }
+        case 4: // 4 way
+        {
+            return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT |
+                    SPEAKER_BACK_LEFT  | SPEAKER_BACK_RIGHT;
+        }
+        case 6: // 5.1 ch
+        {
+            return SPEAKER_FRONT_LEFT   | SPEAKER_FRONT_RIGHT   |
+                    SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT;
+        }
+        case 8: // 7.1 ch
+        {
+            return SPEAKER_FRONT_LEFT   | SPEAKER_FRONT_RIGHT   |
+                    SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT    |
+                    SPEAKER_SIDE_LEFT    | SPEAKER_SIDE_RIGHT;
+        }
+        default:
+        {
+            return 0;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------//
+
+#pragma warning(pop)
 
 // Wave.hpp
