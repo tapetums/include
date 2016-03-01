@@ -26,8 +26,6 @@
   #undef min
 #endif
 
-#include "Transcode.hpp"
-
 //---------------------------------------------------------------------------//
 
 namespace tapetums
@@ -73,8 +71,6 @@ public:
     };
 
 protected:
-    wchar_t m_name[MAX_PATH] { '\0' };
-
     HANDLE   m_handle { INVALID_HANDLE_VALUE };
     HANDLE   m_map    { nullptr };
     uint8_t* m_ptr    { nullptr };
@@ -88,33 +84,28 @@ public:
     File(const File&)             = delete;
     File& operator =(const File&) = delete;
 
-    File(File&& rhs)             noexcept = default;
-    File& operator =(File&& rhs) noexcept = default;
-
-    File(int64_t size, LPCWSTR lpFileName, ACCESS accessMode)
-    { Map(size, lpFileName, accessMode); }
-
-    File(LPCWSTR lpFileName, ACCESS accessMode)
-    { Open(lpFileName, accessMode); }
-
-    File(LPCWSTR lpFileName, ACCESS accessMode, SHARE shareMode, OPEN createMode)
-    { Open(lpFileName, accessMode, shareMode, createMode); }
+    File(File&& rhs)             noexcept { swap(std::move(rhs)); }
+    File& operator =(File&& rhs) noexcept { swap(std::move(rhs)); return *this; }
 
 public:
-    bool     is_open()   const noexcept { return m_handle != INVALID_HANDLE_VALUE; }
-    bool     is_mapped() const noexcept { return m_map != nullptr; }
-    LPCWSTR  name()      const noexcept { return m_name; }
-    HANDLE   handle()    const noexcept { return m_handle; }
-    int64_t  position()  const noexcept { return m_pos; }
-    uint8_t* pointer()   const noexcept { return m_map ? m_ptr + m_pos : nullptr; }
-    int64_t  size()      const noexcept { return m_size; }
+    void swap(File&& rhs);
+
+public:
+    auto is_open()   const noexcept { return m_handle != INVALID_HANDLE_VALUE; }
+    auto is_mapped() const noexcept { return m_map != nullptr; }
+    auto handle()    const noexcept { return m_handle; }
+    auto position()  const noexcept { return m_pos; }
+    auto pointer()   const noexcept { return m_map ? m_ptr + m_pos : nullptr; }
+    auto size()      const noexcept { return m_size; }
 
 public:
     bool    Open(LPCSTR  lpFileName, ACCESS accessMode, SHARE shareMode, OPEN createMode);
     bool    Open(LPCWSTR lpFileName, ACCESS accessMode, SHARE shareMode, OPEN createMode);
+    bool    Open(LPCSTR  lpName, ACCESS accessMode);
     bool    Open(LPCWSTR lpName, ACCESS accessMode);
     void    Close();
     bool    Map(ACCESS accessMode);
+    bool    Map(int64_t size, LPCSTR  lpName, ACCESS accessMode);
     bool    Map(int64_t size, LPCWSTR lpName, ACCESS accessMode);
     void    UnMap();
     size_t  Read(void* buf, size_t size);
@@ -131,10 +122,23 @@ public:
 };
 
 //---------------------------------------------------------------------------//
+// ムーブコンストラクタ
+//---------------------------------------------------------------------------//
+
+inline void tapetums::File::swap(File&& rhs)
+{
+    std::swap(m_handle, rhs.m_handle);
+    std::swap(m_map,    rhs.m_map);
+    std::swap(m_ptr,    rhs.m_ptr);
+    std::swap(m_pos,    rhs.m_pos);
+    std::swap(m_size,   rhs.m_size);
+}
+
+//---------------------------------------------------------------------------//
 // メソッド
 //---------------------------------------------------------------------------//
 
-// ファイルを開く
+// ファイルを開く (ANSI版)
 inline bool tapetums::File::Open
 (
     LPCSTR lpFileName,
@@ -144,8 +148,6 @@ inline bool tapetums::File::Open
 )
 {
     if ( m_handle != INVALID_HANDLE_VALUE ) { return true; }
-
-    toUTF16(lpFileName, m_name, MAX_PATH);
 
     m_handle = ::CreateFileA
     (
@@ -166,7 +168,7 @@ inline bool tapetums::File::Open
 
 //---------------------------------------------------------------------------//
 
-// ファイルを開く
+// ファイルを開く (UNICODE版)
 inline bool tapetums::File::Open
 (
     LPCWSTR lpFileName,
@@ -176,8 +178,6 @@ inline bool tapetums::File::Open
 )
 {
     if ( m_handle != INVALID_HANDLE_VALUE ) { return true; }
-
-    ::StringCchCopyW(m_name, MAX_PATH, lpFileName);
 
     m_handle = ::CreateFileW
     (
@@ -198,7 +198,43 @@ inline bool tapetums::File::Open
 
 //---------------------------------------------------------------------------//
 
-// メモリマップトファイルを開く
+// メモリマップトファイルを開く (ANSI版)
+inline bool tapetums::File::Open
+(
+    LPCSTR lpName, ACCESS accessMode
+)
+{
+    if ( m_map ) { return true; }
+    if ( m_handle != INVALID_HANDLE_VALUE ) { return false; }
+
+    m_map = ::OpenFileMappingA
+    (
+        accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
+        FALSE, lpName
+    );
+    if ( nullptr == m_map )
+    {
+        return false;
+    }
+
+    m_ptr = (uint8_t*)::MapViewOfFile
+    (
+        m_map,
+        accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
+        0, 0, 0
+    );
+    if ( nullptr == m_ptr )
+    {
+        UnMap();
+        return false;
+    }
+
+    return true;
+}
+
+//---------------------------------------------------------------------------//
+
+// メモリマップトファイルを開く (UNICODE版)
 inline bool tapetums::File::Open
 (
     LPCWSTR lpName, ACCESS accessMode
@@ -206,8 +242,6 @@ inline bool tapetums::File::Open
 {
     if ( m_map ) { return true; }
     if ( m_handle != INVALID_HANDLE_VALUE ) { return false; }
-
-    ::StringCchCopyW(m_name, MAX_PATH, lpName);
 
     m_map = ::OpenFileMappingW
     (
@@ -262,12 +296,56 @@ inline bool tapetums::File::Map
 {
     if ( m_handle == INVALID_HANDLE_VALUE ) { return false; }
 
-    return Map(0, nullptr, accessMode);
+    return Map(0, LPCWSTR(nullptr), accessMode);
 }
 
 //---------------------------------------------------------------------------//
 
-// メモリマップトファイルを生成する
+// メモリマップトファイルを生成する (ANSI版)
+inline bool tapetums::File::Map
+(
+    int64_t size, LPCSTR lpName, ACCESS accessMode
+)
+{
+    if ( m_map ) { return true; }
+
+    LARGE_INTEGER li;
+    li.QuadPart = (size > 0) ? size : m_size;
+    if ( li.QuadPart == 0 )
+    {
+        return false;
+    }
+
+    m_map = ::CreateFileMappingA
+    (
+        m_handle, nullptr,
+        accessMode == ACCESS::READ ? PAGE_READONLY : PAGE_READWRITE,
+        li.HighPart, li.LowPart, lpName
+    );
+    if ( nullptr == m_map )
+    {
+        return false;
+    }
+
+    m_ptr = (uint8_t*)::MapViewOfFile
+    (
+        m_map,
+        accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
+        0, 0, 0
+    );
+    if ( nullptr == m_ptr )
+    {
+        UnMap();
+        return false;
+    }
+
+    m_size = li.QuadPart;
+    return true;
+}
+
+//---------------------------------------------------------------------------//
+
+// メモリマップトファイルを生成する (UNICODE版)
 inline bool tapetums::File::Map
 (
     int64_t size, LPCWSTR lpName, ACCESS accessMode
@@ -280,11 +358,6 @@ inline bool tapetums::File::Map
     if ( li.QuadPart == 0 )
     {
         return false;
-    }
-
-    if ( m_handle == INVALID_HANDLE_VALUE )
-    {
-        ::StringCchCopyW(m_name, MAX_PATH, lpName);
     }
 
     m_map = ::CreateFileMappingW
