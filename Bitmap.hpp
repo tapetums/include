@@ -309,7 +309,7 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
     if ( bmpfh.bfType != BM )
     {
         // ビットマップではない
-        return false;
+        Dispose(); return false;
     }
 
     // ヘッダ情報およびパレット情報の読み込み
@@ -321,7 +321,7 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
     if ( cb == 0 )
     {
         // ヘッダ情報の読み込みに失敗
-        return false;
+        Dispose(); return false;
     }
 
     // データをメンバ変数に記憶
@@ -331,11 +331,19 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
         m_info->bmiHeader.biBitCount, m_info->bmiHeader.biClrUsed
     );
 
+    const auto pal_size = sizeof(LOGPALETTE) + m_clr_used * sizeof(PALETTEENTRY);
+    if ( pal_size >= bmpfh.bfOffBits - sizeof(bmpfh) - m_info->bmiHeader.biSize )
+    {
+        // 不正なビットマップ (脆弱性に対処)
+        Dispose(); return false;
+    }
+
     // 内部オブジェクトを生成
     const auto ret = CreateBitmapObjects();
     if ( ! ret )
     {
-        return false;
+        // DIB セクションの 生成に失敗
+        Dispose(); return false;
     }
 
     // ピクセルデータの読み込み
@@ -411,20 +419,22 @@ inline void tapetums::Bitmap::Uninit()
 
 inline bool tapetums::Bitmap::CheckHeader()
 {
-    if ( m_info->bmiHeader.biSize != sizeof(BITMAPINFOHEADER) )
+    const auto& info = m_info->bmiHeader;
+
+    if ( info.biSize != sizeof(BITMAPINFOHEADER) )
     {
         // 対応していないヘッダ形式
         return false;
     }
         
-    if ( BI_RGB == m_info->bmiHeader.biCompression )
+    if ( info.biCompression == BI_RGB )
     {
         switch ( m_bit_count )
         {
             case  1: case  4: case  8:
             case 16: case 24: case 32:
             {
-                return true;
+                break;
             }
             default:
             {
@@ -433,13 +443,13 @@ inline bool tapetums::Bitmap::CheckHeader()
             }
         }
     }
-    else if ( BI_BITFIELDS == m_info->bmiHeader.biCompression )
+    else if ( info.biCompression == BI_BITFIELDS )
     {
         switch ( m_bit_count )
         {
             case 16: case 32:
             {
-                return true;
+                break;
             }
             default:
             {
@@ -453,6 +463,24 @@ inline bool tapetums::Bitmap::CheckHeader()
         // 圧縮ビットマップには非対応
         return false;
     }
+
+    if ( m_bit_count == 1 && m_clr_used > 2 )
+    {
+        // 不正なビットマップ
+        return false;
+    }
+    else if ( m_bit_count == 4 && m_clr_used > 16 )
+    {
+        // 不正なビットマップ
+        return false;
+    }
+    else if ( m_bit_count == 8 && m_clr_used > 256 )
+    {
+        // 不正なビットマップ
+        return false;
+    }
+
+    return true;
 }
 
 //---------------------------------------------------------------------------//
@@ -471,13 +499,14 @@ inline bool tapetums::Bitmap::CreatePalette()
     lpLogPal->palVersion = 0x300;
     lpLogPal->palNumEntries = (WORD)m_clr_used;
 
+    // カラーパレットをコピー
     for ( size_t i = 0; i < m_clr_used; ++i )
     {
         lpLogPal->palPalEntry[i].peRed   = m_info->bmiColors[i].rgbRed;
         lpLogPal->palPalEntry[i].peGreen = m_info->bmiColors[i].rgbGreen;
         lpLogPal->palPalEntry[i].peBlue  = m_info->bmiColors[i].rgbBlue;
     }
-            
+
     m_palette = ::CreatePalette(lpLogPal);
     delete[] lpLogPal;
     lpLogPal = nullptr;
