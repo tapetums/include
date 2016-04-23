@@ -61,16 +61,16 @@ private:
 
 public:
     OpenGLTexture() = default;
+    ~OpenGLTexture() { Uninit(); }
 
     OpenGLTexture(const TextureDesc& desc, const void* const buffer, size_t size)
     { Init(desc, buffer, size); }
 
-    ~OpenGLTexture() { Uninit(); }
-
-    const TextureDesc& desc()    const { return m_desc; }
-    const uint8_t*     buffer()  const { return m_buffer.data(); }
-    size_t             size()    const { return m_buffer.size(); }
-    uint32_t           texture() const { return m_texture; }
+public:
+    const TextureDesc& desc()    const noexcept { return m_desc; }
+    const uint8_t*     buffer()  const noexcept { return m_buffer.data(); }
+    size_t             size()    const noexcept { return m_buffer.size(); }
+    uint32_t           texture() const noexcept { return m_texture; }
 
 public:
     void Init(const TextureDesc& desc, const void* const buffer, size_t size);

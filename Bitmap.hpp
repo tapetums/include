@@ -8,19 +8,11 @@
 //
 //---------------------------------------------------------------------------//
 
-#include <cstdint>
-
 #include <utility>
 
 #include <windows.h>
 
 #include "File.hpp"
-
-//---------------------------------------------------------------------------//
-// 定数
-//---------------------------------------------------------------------------//
-
-constexpr auto BM = 0x4D42;
 
 //---------------------------------------------------------------------------//
 // 前方宣言
@@ -37,6 +29,8 @@ namespace tapetums
 
 class tapetums::Bitmap
 {
+    static constexpr UINT16 BM { 0x4D42 }; // 'BM'
+
 private:
     INT32       m_width     { 0 };
     INT32       m_height    { 0 };
@@ -51,17 +45,18 @@ private:
 
 public:
     Bitmap() = default;
-    Bitmap(INT32 width, INT32 height, UINT16 bit_count, UINT32 clr_used) { Create(width, height, bit_count, clr_used); }
-    Bitmap(const BITMAPINFO* bi)                   { Create(bi); }
-    Bitmap(UINT16 rsrcId, HMODULE hInst = nullptr) { Load(rsrcId, hInst); }
-    Bitmap(LPCWSTR filename)                       { Load(filename); }
-    ~Bitmap()                                      { Dispose(); }
+    ~Bitmap() { Dispose(); }
 
     Bitmap(const Bitmap& lhs)             { copy(lhs); }
     Bitmap& operator =(const Bitmap& lhs) { copy(lhs); return *this; }
 
     Bitmap(Bitmap&& rhs)             noexcept { swap(std::move(rhs)); }
     Bitmap& operator =(Bitmap&& rhs) noexcept { swap(std::move(rhs)); return *this; }
+
+    Bitmap(INT32 width, INT32 height, UINT16 bit_count, UINT32 clr_used) { Create(width, height, bit_count, clr_used); }
+    Bitmap(const BITMAPINFO* bi)                   { Create(bi); }
+    Bitmap(UINT16 rsrcId, HMODULE hInst = nullptr) { Load(rsrcId, hInst); }
+    Bitmap(LPCWSTR filename)                       { Load(filename); }
 
 private:
     void copy(const Bitmap& lhs);
@@ -367,7 +362,7 @@ inline bool tapetums::Bitmap::Save(LPCWSTR filename)
 
     // ファイルヘッダの書き出し
     BITMAPFILEHEADER bmpfh;
-    bmpfh.bfType      = 0x4d42; // `BM`
+    bmpfh.bfType      = BM; // = 0x4D42;
     bmpfh.bfOffBits   = bmpfhSize + bmpInfoSize;
     bmpfh.bfReserved1 = 0;
     bmpfh.bfReserved2 = 0;
@@ -500,7 +495,7 @@ inline bool tapetums::Bitmap::CreatePalette()
     lpLogPal->palNumEntries = (WORD)m_clr_used;
 
     // カラーパレットをコピー
-    for ( size_t i = 0; i < m_clr_used; ++i )
+    for ( auto i = 0; i < m_clr_used; ++i )
     {
         lpLogPal->palPalEntry[i].peRed   = m_info->bmiColors[i].rgbRed;
         lpLogPal->palPalEntry[i].peGreen = m_info->bmiColors[i].rgbGreen;

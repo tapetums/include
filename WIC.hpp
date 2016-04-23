@@ -43,6 +43,11 @@ inline HRESULT tapetums::WIC::Load
     LPCWSTR filename, Bitmap* bitmap
 )
 {
+    if ( nullptr == bitmap )
+    {
+        return E_INVALIDARG;
+    }
+
     HRESULT hr;
 
     ComPtr<IWICImagingFactory> factory;
@@ -130,8 +135,10 @@ inline HRESULT tapetums::WIC::Decode
         return E_INVALIDARG;
     }
 
+    HRESULT hr;
+
     ComPtr<IStream> stream;
-    auto hr = ::CreateStreamOnHGlobal(nullptr, TRUE, &stream);
+    hr = ::CreateStreamOnHGlobal(nullptr, TRUE, &stream);
     if ( FAILED(hr) )
     {
         return hr;
