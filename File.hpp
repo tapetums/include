@@ -127,6 +127,8 @@ public:
 
 inline void tapetums::File::swap(File&& rhs)
 {
+    if ( this == &rhs ) { return; }
+
     std::swap(m_handle, rhs.m_handle);
     std::swap(m_map,    rhs.m_map);
     std::swap(m_ptr,    rhs.m_ptr);
