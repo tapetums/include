@@ -1,0 +1,15 @@
+// cstdint standard header
+#pragma once
+#ifndef _CSTDINT_
+#define _CSTDINT_
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <stdfloat.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <stdfloat.h>
+#endif /* _STD_USING */
+
+#endif /* _CSTDINT_ */
