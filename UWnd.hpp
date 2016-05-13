@@ -316,6 +316,8 @@ inline tapetums::UWnd::UWnd()
 
 inline void tapetums::UWnd::swap(UWnd&& rhs) noexcept
 {
+    if ( this == &rhs ) return;
+
     std::swap(m_x,             rhs.m_x);
     std::swap(m_y,             rhs.m_y);
     std::swap(m_w,             rhs.m_w);
