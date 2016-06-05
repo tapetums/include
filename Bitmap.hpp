@@ -12,8 +12,6 @@
 
 #include <windows.h>
 
-#include "File.hpp"
-
 //---------------------------------------------------------------------------//
 // 前方宣言
 //---------------------------------------------------------------------------//
@@ -283,7 +281,7 @@ inline bool tapetums::Bitmap::Load(UINT16 rsrcId, HMODULE hInst)
 
     // ピクセルデータのコピー
     const auto p_src = p + bmpInfoSize;
-    ::memcpy(m_pbits, p_src, this->size());
+    ::memcpy(m_pbits, p_src, size());
 
     return true;
 }
@@ -292,31 +290,33 @@ inline bool tapetums::Bitmap::Load(UINT16 rsrcId, HMODULE hInst)
 
 inline bool tapetums::Bitmap::Load(LPCWSTR filename)
 {
-    File file;
-    file.Open
+    DWORD cb;
+
+    const auto file = ::CreateFileW
     (
-        filename, File::ACCESS::READ, File::SHARE::READ, File::OPEN::EXISTING
+        filename, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+        FILE_ATTRIBUTE_READONLY, nullptr
     );
 
     // ファイルヘッダの読み込み
     BITMAPFILEHEADER bmpfh;
-    file.Read(&bmpfh, sizeof(bmpfh));
+    ::ReadFile(file, &bmpfh, sizeof(bmpfh), &cb, nullptr);
     if ( bmpfh.bfType != BM )
     {
         // ビットマップではない
-        Dispose(); return false;
+        ::CloseHandle(file); Dispose(); return false;
     }
 
     // ヘッダ情報およびパレット情報の読み込み
     /// 仮にヘッダのバージョンがV4形式やV5形式でもこれで対応できます。
-    const auto bmpInfoSize = bmpfh.bfOffBits - sizeof(bmpfh);
+    const DWORD bmpInfoSize = bmpfh.bfOffBits - sizeof(bmpfh);
     m_info = (BITMAPINFO*) new UINT8[bmpInfoSize];
 
-    const auto cb = file.Read(m_info, (DWORD)bmpInfoSize);
+    ::ReadFile(file, m_info, bmpInfoSize, &cb, nullptr);
     if ( cb == 0 )
     {
         // ヘッダ情報の読み込みに失敗
-        Dispose(); return false;
+        ::CloseHandle(file); Dispose(); return false;
     }
 
     // データをメンバ変数に記憶
@@ -327,10 +327,10 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
     );
 
     const auto pal_size = m_clr_used * sizeof(PALETTEENTRY);
-    if ( pal_size > bmpfh.bfOffBits - sizeof(bmpfh) - m_info->bmiHeader.biSize )
+    if ( pal_size > bmpfh.bfOffBits - sizeof(bmpfh) - size() )
     {
         // 不正なビットマップ (脆弱性に対処)
-        Dispose(); return false;
+        ::CloseHandle(file); Dispose(); return false;
     }
 
     // 内部オブジェクトを生成
@@ -338,12 +338,13 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
     if ( ! ret )
     {
         // DIB セクションの 生成に失敗
-        Dispose(); return false;
+        ::CloseHandle(file); Dispose(); return false;
     }
 
     // ピクセルデータの読み込み
-    file.Read(m_pbits, size());
+    ::ReadFile(file, m_pbits, size(), &cb, nullptr);
 
+    ::CloseHandle(file);
     return true;
 }
 
@@ -351,10 +352,12 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
 
 inline bool tapetums::Bitmap::Save(LPCWSTR filename)
 {
-    File file;
-    file.Open
+    DWORD cb;
+
+    const auto file = ::CreateFileW
     (
-        filename, File::ACCESS::WRITE, File::SHARE::READ, File::OPEN::OR_CREATE
+        filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL, nullptr
     );
 
     const DWORD bmpfhSize = sizeof(BITMAPFILEHEADER);
@@ -366,15 +369,16 @@ inline bool tapetums::Bitmap::Save(LPCWSTR filename)
     bmpfh.bfOffBits   = bmpfhSize + bmpInfoSize;
     bmpfh.bfReserved1 = 0;
     bmpfh.bfReserved2 = 0;
-    bmpfh.bfSize      = bmpfh.bfOffBits + m_info->bmiHeader.biSizeImage;
-    file.Write(&bmpfh, bmpfhSize);
+    bmpfh.bfSize      = bmpfh.bfOffBits + size();
+    ::WriteFile(file, &bmpfh, bmpfhSize, &cb, nullptr);
 
     // ヘッダ情報およびパレット情報の書き出し
-    file.Write(m_info, bmpInfoSize);
+    ::WriteFile(file, m_info, bmpInfoSize, &cb, nullptr);
 
     // ピクセルデータの書き出し
-    file.Write(m_pbits, size());
+    ::WriteFile(file, m_pbits, size(), &cb, nullptr);
 
+    ::CloseHandle(file);
     return true;
 }
 
