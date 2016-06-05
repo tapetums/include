@@ -326,8 +326,8 @@ inline bool tapetums::Bitmap::Load(LPCWSTR filename)
         m_info->bmiHeader.biBitCount, m_info->bmiHeader.biClrUsed
     );
 
-    const auto pal_size = sizeof(LOGPALETTE) + m_clr_used * sizeof(PALETTEENTRY);
-    if ( pal_size >= bmpfh.bfOffBits - sizeof(bmpfh) - m_info->bmiHeader.biSize )
+    const auto pal_size = m_clr_used * sizeof(PALETTEENTRY);
+    if ( pal_size > bmpfh.bfOffBits - sizeof(bmpfh) - m_info->bmiHeader.biSize )
     {
         // 不正なビットマップ (脆弱性に対処)
         Dispose(); return false;
