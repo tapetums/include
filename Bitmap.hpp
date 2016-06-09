@@ -499,7 +499,7 @@ inline bool tapetums::Bitmap::CreatePalette()
     lpLogPal->palNumEntries = (WORD)m_clr_used;
 
     // カラーパレットをコピー
-    for ( auto i = 0; i < m_clr_used; ++i )
+    for ( UINT32 i = 0; i < m_clr_used; ++i )
     {
         lpLogPal->palPalEntry[i].peRed   = m_info->bmiColors[i].rgbRed;
         lpLogPal->palPalEntry[i].peGreen = m_info->bmiColors[i].rgbGreen;
