@@ -403,7 +403,7 @@ inline uint8_t* tapetums::Wave::ForwardPointer
     uint8_t* p, const char chunkId[4], uint32_t chunkSize
 )
 {
-    if ( 8 < chunkSize && chunkSize < UINT32_MAX )
+    if ( 4 <= chunkSize && chunkSize < UINT32_MAX )
     {
         return p + 4 * sizeof(char) + sizeof(chunkSize) + chunkSize;
     }
