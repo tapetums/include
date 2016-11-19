@@ -62,10 +62,10 @@ public:
     void swap(Wave&& rhs);
 
 public:
-    auto format() const noexcept { return (const WAVEFORMATEXTENSIBLE*)&wfex; }
-    auto size()   const noexcept { return data_size; }
-    auto data()   const noexcept { return (const uint8_t*)data_offset; }
-    auto data()   noexcept       { return data_offset; }
+    auto& format() const noexcept { return wfex; }
+    auto  size()   const noexcept { return data_size; }
+    auto  data()   const noexcept { return (const uint8_t*)data_offset; }
+    auto  data()   noexcept       { return data_offset; }
 
 public:
     bool Create (LPCWSTR path, WAVEFORMATEXTENSIBLE& format, int64_t data_size);
