@@ -23,6 +23,7 @@ static constexpr char chunkId_RIFF[4] = { 'R', 'I', 'F', 'F' };
 static constexpr char chunkId_JUNK[4] = { 'J', 'U', 'N', 'K' };
 static constexpr char chunkId_fmt [4] = { 'f', 'm', 't', ' ' };
 static constexpr char chunkId_data[4] = { 'd', 'a', 't', 'a' };
+static constexpr char chunkId_fact[4] = { 'f', 'a', 'c', 't' };
 
 static constexpr char chunkId_RF64[4] = { 'R', 'F', '6', '4' };
 static constexpr char chunkId_ds64[4] = { 'd', 's', '6', '4' };
@@ -131,6 +132,15 @@ struct DataChunk
     char     chunkId[4];     // 'data'
     uint32_t chunkSize;      // 4 byte size of the 'data' chunk
     uint8_t  waveData[0];    // audio samples
+};
+
+//---------------------------------------------------------------------------//
+
+struct FactChunk
+{
+    char     chunkId[4];     // 'fact'
+    uint32_t chunkSize;      // 4 byte size of the 'data' chunk
+    uint32_t sample_count;   // total sample count
 };
 
 //---------------------------------------------------------------------------//
