@@ -80,7 +80,8 @@ int32_t wmain(int32_t argc, wchar_t* argv[])
     }
 
     // Make a message queue
-    ::PostMessage(nullptr, WM_NULL, 0, 0);
+    MSG msg;
+    ::PeekMessage(&msg, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
 
     // Start playing
     hr = device.Start(::GetCurrentThreadId());
@@ -90,7 +91,6 @@ int32_t wmain(int32_t argc, wchar_t* argv[])
     }
 
     // Message loop
-    MSG msg;
     while ( ::GetMessage(&msg, nullptr, 0, 0) > 0 )
     {
         if ( msg.message == WM_WASAPI_CALLBACK )
