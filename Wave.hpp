@@ -68,7 +68,7 @@ public:
     auto  data()   noexcept       { return data_offset; }
 
 public:
-    bool Create (LPCWSTR path, WAVEFORMATEXTENSIBLE& format, int64_t data_size);
+    bool Create (LPCWSTR path, const WAVEFORMATEXTENSIBLE& format, int64_t data_size);
     void Dispose();
     bool Load   (LPCWSTR path);
     bool Save   (LPCWSTR path);
@@ -103,7 +103,7 @@ inline void tapetums::Wave::swap(Wave&& rhs)
 
 inline bool tapetums::Wave::Create
 (
-    LPCWSTR path, WAVEFORMATEXTENSIBLE& format, int64_t size
+    LPCWSTR path, const WAVEFORMATEXTENSIBLE& format, int64_t size
 )
 {
     if ( file.is_mapped() ) { Dispose(); }
@@ -117,7 +117,7 @@ inline bool tapetums::Wave::Create
                           sizeof(DataSize64Chunk) +
                           sizeof(FormatExtensibleChunk) +
                           sizeof(DataChunk) +
-                          size;
+                          data_size;
 
     // メモリマップトファイルの生成
     if ( path == nullptr || path[0] == L'\0' )
@@ -164,27 +164,27 @@ inline bool tapetums::Wave::Create
     }
     ds64.chunkSize   = sizeof(ds64) - 8;
     ds64.riffSize    = riffSize - 8;
-    ds64.dataSize    = size;
+    ds64.dataSize    = data_size;
     ds64.sampleCount = 0;
     ds64.tableLength = 0;
 
     file.Write(ds64);
 
-    if ( format.dwChannelMask == 0 )
+    if ( wfex.dwChannelMask == 0 )
     {
-        format.dwChannelMask = MaskChannelMask(format.Format.nChannels);
+        wfex.dwChannelMask = MaskChannelMask(wfex.Format.nChannels);
     }
 
     FormatExtensibleChunk fmt;
     ::memcpy(fmt.chunkId, chunkId_fmt, 4);
     fmt.chunkSize = sizeof(fmt) - 8;
-    ::memcpy(&fmt.formatType, &format.Format.wFormatTag, sizeof(format));
+    ::memcpy(&fmt.formatType, &wfex.Format.wFormatTag, sizeof(wfex));
 
     file.Write(fmt);
 
     DataChunk data;
     ::memcpy(data.chunkId, chunkId_data, 4);
-    data.chunkSize = size > UINT32_MAX ? uint32_t(-1) : uint32_t(size);
+    data.chunkSize = data_size > UINT32_MAX ? uint32_t(-1) : uint32_t(data_size);
 
     data_offset = file.pointer() + 8;
     file.Write(data);
