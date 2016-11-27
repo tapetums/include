@@ -9,7 +9,7 @@ C++ (C++11/C++14)
 
 # How to use
 
-Just #include <YouWantToUse.hpp>.  
+Just #include < YouWantToUse.hpp >.  
 All files are independent header files. You don't need any .cpp file.  
 Some of them depend on other .hpp files. Therefore, please copy those files together if you want to use this library by copying only what you want.
 
