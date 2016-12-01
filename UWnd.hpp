@@ -71,7 +71,7 @@ public: // accessors
     INT32 height()        const noexcept { return m_h; }
     POINT position()      const noexcept { return { m_x, m_y }; }
     SIZE  size()          const noexcept { return { m_w, m_h }; }
-    RECT  rect()          const noexcept { return { m_w, m_h, m_x + m_w, m_y + m_h }; }
+    RECT  rect()          const noexcept { return { m_x, m_y, m_x + m_w, m_y + m_h }; }
     HWND  handle()        const noexcept { return m_hwnd; }
     bool  is_fullscreen() const noexcept { return m_is_fullscreen; }
 
@@ -111,7 +111,7 @@ public: // methods
     bool WINAPI ShowNotifyIconInfo(UINT uID, DWORD dwInfoFlags, LPCTSTR szInfoTitle, LPCTSTR szInfo, UINT uTimeout = -1);
 
     LRESULT WINAPI Send(UINT msg, WPARAM wp, LPARAM lp);
-    LRESULT WINAPI Post(UINT msg, WPARAM wp, LPARAM lp);
+    BOOL    WINAPI Post(UINT msg, WPARAM wp, LPARAM lp);
 
 public: // properties
     DWORD  WINAPI GetStyle       () const noexcept;
@@ -498,10 +498,6 @@ inline void WINAPI tapetums::UWnd::ToCenter()
     if ( const auto parent = GetParent() )
     {
         ::GetWindowRect(parent, &rc);
-        mx = rc.left;
-        my = rc.top;
-        mw = rc.right  - rc.left;
-        mh = rc.bottom - rc.top;
     }
     else
     {
@@ -509,11 +505,12 @@ inline void WINAPI tapetums::UWnd::ToCenter()
         ::GetCursorPos(&pt);
 
         GetRectForMonitor(pt, &rc);
-        mx = rc.left;
-        my = rc.top;
-        mw = rc.right  - rc.left;
-        mh = rc.bottom - rc.top;
     }
+
+    mx = rc.left;
+    my = rc.top;
+    mw = rc.right  - rc.left;
+    mh = rc.bottom - rc.top;
 
     ::GetClientRect(m_hwnd, &rc);
     const auto w = rc.right  - rc.left;
@@ -718,7 +715,7 @@ inline LRESULT WINAPI tapetums::UWnd::Send
 //---------------------------------------------------------------------------//
 
 // ウィンドウにメッセージを送る
-inline LRESULT WINAPI tapetums::UWnd::Post
+inline BOOL WINAPI tapetums::UWnd::Post
 (
     UINT msg, WPARAM wp, LPARAM lp
 )
