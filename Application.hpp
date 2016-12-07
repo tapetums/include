@@ -35,8 +35,8 @@ public:
     Application& operator= (Application&&) noexcept = delete;
 
 public:
-    static DWORD ThreadId() noexcept { return threadId(); }
-    static bool  IsLoop()   noexcept { return loop(); }
+    static DWORD thread_id() noexcept { return m_thread_id(); }
+    static bool  is_loop()   noexcept { return m_loop(); }
 
 public:
     static INT32 Run();
@@ -48,8 +48,8 @@ public:
     static INT32 Run(Updater& update);
 
 private:
-    static DWORD& threadId() noexcept { static DWORD threadId { 0 };    return threadId; }
-    static bool&  loop()     noexcept { static bool  loop     { true }; return loop; }
+    static DWORD& m_thread_id() noexcept { static DWORD id   { 0 };    return id; }
+    static bool&  m_loop()      noexcept { static bool  loop { true }; return loop; }
 };
 
 //---------------------------------------------------------------------------//
@@ -59,10 +59,12 @@ private:
 // メッセージループ
 inline INT32 tapetums::Application::Run()
 {
-    threadId() = ::GetCurrentThreadId();
+    // 静的変数を初期化
+    m_thread_id() = ::GetCurrentThreadId();
 
-    MSG msg { };
+    MSG msg;
 
+    // メインループ
     while ( ::GetMessage(&msg, nullptr, 0, 0) > 0 )
     {
         ::TranslateMessage(&msg);
@@ -78,11 +80,14 @@ inline INT32 tapetums::Application::Run()
 template<typename Updater>
 inline INT32 tapetums::Application::Run(Updater& update)
 {
-    threadId() = ::GetCurrentThreadId();
+    // 静的変数を初期化
+    m_thread_id() = ::GetCurrentThreadId();
+    m_loop()      = true;
 
-    MSG msg { };
+    MSG msg;
 
-    while ( true )
+    // メインループ
+    for ( ; ; )
     {
         if ( ::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) )
         {
@@ -90,7 +95,7 @@ inline INT32 tapetums::Application::Run(Updater& update)
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
         }
-        else if ( loop() )
+        else if ( is_loop() )
         {
             update(); // ファンクタの呼び出し
         }
@@ -108,7 +113,7 @@ inline INT32 tapetums::Application::Run(Updater& update)
 // メッセージループの終了
 inline bool tapetums::Application::Exit()
 {
-    return ::PostThreadMessage(threadId(), WM_QUIT, 0, 0) ? true : false;
+    return ::PostThreadMessage(thread_id(), WM_QUIT, 0, 0) ? true : false;
 }
 
 //---------------------------------------------------------------------------//
@@ -116,7 +121,7 @@ inline bool tapetums::Application::Exit()
 // ゲームループを停止
 inline void tapetums::Application::Pause()
 {
-    loop() = false;
+    m_loop() = false;
 }
 
 //---------------------------------------------------------------------------//
@@ -124,7 +129,7 @@ inline void tapetums::Application::Pause()
 // ゲームループを再開
 inline void tapetums::Application::Resume()
 {
-    loop() = true;
+    m_loop() = true;
 }
 
 //---------------------------------------------------------------------------//
