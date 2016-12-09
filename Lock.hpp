@@ -46,8 +46,8 @@ public:
     Lock(const Lock&) = delete;
     Lock& operator =(const Lock&) = delete;
 
-    Lock(Lock&& rhs) noexcept = delete;
-    Lock& operator=(Lock&& rhs) noexcept = delete;
+    Lock(Lock&& rhs) noexcept = default;
+    Lock& operator=(Lock&& rhs) noexcept = default;
 
 public:
     inline void enter() noexcept { ::EnterCriticalSection(&cs); }
@@ -90,8 +90,8 @@ public:
     Lock(const Lock&) = delete;
     Lock& operator =(const Lock&) = delete;
 
-    Lock(Lock&&) noexcept = delete;
-    Lock& operator =(Lock&&) noexcept = delete;
+    Lock(Lock&&) noexcept = default;
+    Lock& operator =(Lock&&) noexcept = default;
 
     ~Lock() noexcept = default;
 
