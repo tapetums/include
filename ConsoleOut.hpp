@@ -4,7 +4,7 @@
 //
 // ConsoleOut.hpp
 // デバッグウィンドウへの出力関数
-//   Copyright (C) 2014-2015 tapetums
+//   Copyright (C) 2014-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -40,8 +40,8 @@
 // 定数
 //---------------------------------------------------------------------------//
 
-constexpr size_t TIME_BUFSIZE    = 32;
-constexpr size_t CONSOLE_BUFSIZE = 1024;
+constexpr size_t TIME_BUFSIZE    { 32 };
+constexpr size_t CONSOLE_BUFSIZE { 1024 };
 
 //---------------------------------------------------------------------------//
 // 排他ロック
@@ -49,11 +49,11 @@ constexpr size_t CONSOLE_BUFSIZE = 1024;
 
 #include "Lock.hpp"
 
-struct lock
+struct console_lock
 {
-    static tapetums::CsLock::Lock& get()
+    static tapetums::CS::Lock& get()
     {
-        static tapetums::CsLock::Lock g_lock;
+        static tapetums::CS::Lock g_lock;
         return g_lock;
     }
 };
@@ -95,8 +95,7 @@ inline void console_outA(const char* format, ...)
 
     // 排他制御
     {
-        tapetums::CsLock::CS cs(lock::get());
-        cs.enter();
+        tapetums::CS::LockGuard guard(console_lock::get());
 
         ::OutputDebugStringA(time.data());
         ::OutputDebugStringA(buff.data());
@@ -139,8 +138,7 @@ inline void console_outW(const wchar_t* format, ...)
 
     // 排他制御
     {
-        tapetums::CsLock::CS cs(lock::get());
-        cs.enter();
+        tapetums::CS::LockGuard guard(console_lock::get());
 
         ::OutputDebugStringW(time.data());
         ::OutputDebugStringW(buff.data());
