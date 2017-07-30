@@ -157,8 +157,8 @@ namespace tapetums
 {
     namespace WASAPI
     {
-        struct CS;
         struct Lock;
+        struct LockGuard;
         struct PropVariant;
 
         struct Config;
@@ -175,18 +175,18 @@ namespace tapetums
 // RAII オブジェクト
 //---------------------------------------------------------------------------//
 
-struct tapetums::WASAPI::CS
+struct tapetums::WASAPI::Lock
 {
     CRITICAL_SECTION cs;
 
-    CS()  { ::InitializeCriticalSection(&cs); }
-    ~CS() { ::DeleteCriticalSection(&cs); }
+    Lock()  { ::InitializeCriticalSection(&cs); }
+    ~Lock() { ::DeleteCriticalSection(&cs); }
 
-    CS(const CS&) = delete;
-    CS& operator =(const CS&) = delete;
+    Lock(const Lock&)             = delete;
+    Lock& operator =(const Lock&) = delete;
 
-    CS(CS&& rhs)            noexcept = default;
-    CS& operator=(CS&& rhs) noexcept = default;
+    Lock(Lock&& rhs)            noexcept = default;
+    Lock& operator=(Lock&& rhs) noexcept = default;
 
     inline void enter() noexcept { ::EnterCriticalSection(&cs); }
     inline void leave() noexcept { ::LeaveCriticalSection(&cs); }
@@ -194,15 +194,18 @@ struct tapetums::WASAPI::CS
 
 //---------------------------------------------------------------------------//
 
-struct tapetums::WASAPI::Lock
+struct tapetums::WASAPI::LockGuard
 {
-    CS& m_lock;
+    tapetums::WASAPI::Lock& m_lock;
 
-    explicit Lock(CS& lock) : m_lock(lock) { }
-    ~Lock()                                { m_lock.leave(); }
+    explicit LockGuard(Lock& lock) : m_lock(lock) { m_lock.enter(); }
+    ~LockGuard()                                  { m_lock.leave(); }
 
-    inline void enter() noexcept { m_lock.enter(); }
-    inline void leave() noexcept { m_lock.leave(); }
+    LockGuard(const LockGuard&)             = delete;
+    LockGuard& operator =(const LockGuard&) = delete;
+
+    LockGuard(LockGuard&& rhs)            noexcept = delete;
+    LockGuard& operator=(LockGuard&& rhs) noexcept = delete;
 };
 
 //---------------------------------------------------------------------------//
@@ -213,6 +216,12 @@ struct tapetums::WASAPI::PropVariant
 
     explicit PropVariant (PROPVARIANT* v) : v(v) { ::PropVariantInit(v); }
     ~PropVariant()                               { ::PropVariantClear(v); }
+
+    PropVariant(const PropVariant&)             = delete;
+    PropVariant& operator =(const PropVariant&) = delete;
+
+    PropVariant(PropVariant&& rhs)            noexcept = delete;
+    PropVariant& operator=(PropVariant&& rhs) noexcept = delete;
 };
 
 //---------------------------------------------------------------------------//
@@ -246,9 +255,9 @@ private:
     DWORD          m_listener    { 0 };
     bool           m_loop        { false };
 
-    CS cs;
-    std::thread m_thread_write;
-    std::vector<uint8_t> m_buffer;
+    tapetums::WASAPI::Lock m_lock;
+    std::thread            m_thread_write;
+    std::vector<uint8_t>   m_buffer;
 
     tapetums::WASAPI::Config m_config;
 
@@ -507,8 +516,7 @@ inline HRESULT tapetums::WASAPI::Device::Open
 {
     HRESULT hr;
 
-    Lock lock(cs);
-    lock.enter();
+    tapetums::WASAPI::LockGuard guard(m_lock);
 
     if ( is_open() )
     {
@@ -549,8 +557,7 @@ inline HRESULT tapetums::WASAPI::Device::Open
 
 inline HRESULT tapetums::WASAPI::Device::Close()
 {
-    Lock lock(cs);
-    lock.enter();
+    tapetums::WASAPI::LockGuard guard(m_lock);
 
     if ( ! is_open() )
     {
@@ -584,8 +591,7 @@ inline HRESULT tapetums::WASAPI::Device::Start
     DWORD listener_thread_id
 )
 {
-    Lock lock(cs);
-    lock.enter();
+    tapetums::WASAPI::LockGuard guard(m_lock);
 
     if ( ! is_open() )
     {
@@ -630,8 +636,7 @@ inline HRESULT tapetums::WASAPI::Device::Start
 
 inline HRESULT tapetums::WASAPI::Device::Stop()
 {
-    Lock lock(cs);
-    lock.enter();
+    tapetums::WASAPI::LockGuard guard(m_lock);
 
     if ( ! is_running() )
     {
