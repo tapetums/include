@@ -5,7 +5,7 @@
 // WASAPI.hpp
 //  Windows Audio Session API による 音声出力モジュール (ヘッダオンリー)
 //  排他/共有モードのイベント通知のみに対応 (requires Windows 7 or greater)
-//   Copyright (C) 2011-2016 tapetums
+//   Copyright (C) 2011-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -280,7 +280,16 @@ public: // methods
     HRESULT Stop ();
 
 private:
-    void MainLoop();
+    HRESULT Activate();
+    HRESULT GetMixFormat();
+    HRESULT IsFormatSupported(const Config& cfg);
+    HRESULT GetDevicePeriod(REFERENCE_TIME period);
+    HRESULT Initialize();
+    HRESULT SetEventHandle();
+    HRESULT GetStreamLatency();
+    HRESULT GetBufferSize();
+    HRESULT GetService();
+    void    MainLoop();
 };
 
 //---------------------------------------------------------------------------//
@@ -506,135 +515,32 @@ inline HRESULT tapetums::WASAPI::Device::Open
         return S_FALSE;
     }
 
-    // イベントの生成
-    m_evt_empty = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    hr = Activate();
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-    // デバイスを起動
-    hr = m_device->Activate
-    (
-        __uuidof(IAudioClient), CLSCTX_INPROC_SERVER, nullptr,
-        (void**)&m_client
-    );
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
+    hr = GetMixFormat();
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-    // デバイスの現在のフォーマット情報を取得する
-    WAVEFORMATEXTENSIBLE* format_current = nullptr;
-    hr = m_client->GetMixFormat((WAVEFORMATEX**)&format_current);
-    if ( nullptr == format_current || format_current->Format.cbSize < 22 )
-    {
-        Close();
-        return hr;
-    }
-    if ( format_current )
-    {
-        ::CoTaskMemFree(format_current);
-        format_current = nullptr;
-    }
+    hr = IsFormatSupported(cfg);
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-    // 対応形式かを調べる
-    m_config.share_mode = cfg.share_mode;
-    m_config.format     = cfg.format;
-    WAVEFORMATEXTENSIBLE* format_closest { nullptr };
-    hr = m_client->IsFormatSupported
-    (
-        m_config.share_mode,
-        (WAVEFORMATEX*)&m_config.format, (WAVEFORMATEX**)&format_closest
-    );
-    if ( format_closest )
-    {
-        m_config.format = *format_closest;
+    hr = GetDevicePeriod(cfg.period);
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-        ::CoTaskMemFree(format_closest);
-        format_closest = nullptr;
-    }
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
+    hr = Initialize();
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-    // バッファ処理時間の取得
-    REFERENCE_TIME def_preiod;
-    REFERENCE_TIME min_preiod;
-    hr = m_client->GetDevicePeriod(&def_preiod, &min_preiod);
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
-    m_config.period = cfg.period;
-    if ( m_config.period == 0 )
-    {
-        m_config.period = def_preiod;
-    }
-    else if ( m_config.period < min_preiod )
-    {
-        m_config.period = min_preiod;
-    }
-    else if ( m_config.period > 500 * 10 * 1000 )
-    {
-        m_config.period = 500 * 10 * 1000;
-    }
+    hr = SetEventHandle();
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-    // セッション UUID を生成
-    UUID uuid;
-    ::CoCreateGuid((GUID*)&uuid);
+    hr = GetStreamLatency();
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-    // デバイスの初期化
-    hr = m_client->Initialize
-    (
-        m_config.share_mode,
-        AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST,
-        m_config.period,
-        m_config.share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? m_config.period : 0,
-        (WAVEFORMATEX*)&m_config.format,
-        &uuid
-    );
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
+    hr = GetBufferSize();
+    if ( FAILED(hr) ) { Close(); return hr; }
 
-    // レイテンシの取得
-    hr = m_client->GetStreamLatency(&m_latency);
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
-
-    // バッファサイズの取得
-    hr = m_client->GetBufferSize(&m_frame_count);
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
-    m_buf_size = m_frame_count * m_config.format.Format.nBlockAlign;
-
-    // イベントハンドルの設定
-    hr = m_client->SetEventHandle(m_evt_empty);
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
-
-    // 再生クライアントの取得
-    hr = m_client->GetService(IID_PPV_ARGS(&m_renderer));
-    if ( FAILED(hr) )
-    {
-        Close();
-        return hr;
-    }
-
-    // 内部バッファを確保
-    m_buffer.resize(m_buf_size);
+    hr = GetService();
+    if ( FAILED(hr) ) { Close(); return hr; }
 
     return hr;
 }
@@ -746,6 +652,176 @@ inline HRESULT tapetums::WASAPI::Device::Stop()
 // WASAPI::Device Inner Methods
 //---------------------------------------------------------------------------//
 
+inline HRESULT tapetums::WASAPI::Device::Activate()
+{
+    // デバイスを起動
+    const auto hr = m_device->Activate
+    (
+        __uuidof(IAudioClient), CLSCTX_INPROC_SERVER, nullptr,
+        (void**)&m_client
+    );
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::GetMixFormat()
+{
+    WAVEFORMATEXTENSIBLE* current_format { nullptr };
+
+    // デバイスの現在のフォーマット情報を取得する
+    const auto hr = m_client->GetMixFormat
+    (
+        (WAVEFORMATEX**)&current_format
+    );
+
+    if ( current_format )
+    {
+        ::CoTaskMemFree(current_format);
+    }
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::IsFormatSupported
+(
+    const Config& cfg
+)
+{
+    WAVEFORMATEXTENSIBLE* closest_format { nullptr };
+
+    // 対応形式かを調べる
+    const auto hr = m_client->IsFormatSupported
+    (
+        cfg.share_mode,
+        (WAVEFORMATEX*)&cfg.format,
+        (WAVEFORMATEX**)&closest_format
+    );
+
+    // 内部変数にコピー
+    m_config.share_mode = cfg.share_mode;
+    if ( closest_format == nullptr )
+    {
+        m_config.format = cfg.format;
+    }
+    else
+    {
+        m_config.format = *closest_format;
+
+        ::CoTaskMemFree(closest_format);
+    }
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::GetDevicePeriod
+(
+    REFERENCE_TIME period
+)
+{
+    REFERENCE_TIME def_period;
+    REFERENCE_TIME min_period;
+
+    // バッファ処理時間の取得
+    const auto hr = m_client->GetDevicePeriod
+    (
+        &def_period, &min_period
+    );
+
+    // 範囲チェック
+    m_config.period = period;
+    if ( m_config.period == 0 )
+    {
+        m_config.period = def_period;
+    }
+    else if ( m_config.period < min_period )
+    {
+        m_config.period = min_period;
+    }
+    else if ( m_config.period > 500 * 10 * 1000 )
+    {
+        m_config.period = 500 * 10 * 1000;
+    }
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::Initialize()
+{
+    // セッション UUID を生成
+    UUID uuid;
+    ::CoCreateGuid((GUID*)&uuid);
+
+    // デバイスの初期化
+    const auto hr = m_client->Initialize
+    (
+        m_config.share_mode,
+        AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST,
+        m_config.period,
+        m_config.share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? m_config.period : 0,
+        (WAVEFORMATEX*)&m_config.format,
+        &uuid
+    );
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::SetEventHandle()
+{
+    // イベントの生成
+    m_evt_empty = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
+
+    // イベントハンドルの設定
+    const auto hr = m_client->SetEventHandle(m_evt_empty);
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::GetStreamLatency()
+{
+    // レイテンシの取得
+    const auto hr = m_client->GetStreamLatency(&m_latency);
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::GetBufferSize()
+{
+    // バッファサイズの取得
+    const auto hr = m_client->GetBufferSize(&m_frame_count);
+
+    // 内部バッファを確保
+    m_buf_size = m_frame_count * m_config.format.Format.nBlockAlign;
+    m_buffer.resize(m_buf_size);
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HRESULT tapetums::WASAPI::Device::GetService()
+{
+    // 再生クライアントの取得
+    const auto hr = m_client->GetService(IID_PPV_ARGS(&m_renderer));
+
+    return hr;
+}
+
+//---------------------------------------------------------------------------//
+
 inline void tapetums::WASAPI::Device::MainLoop()
 {
     HRESULT hr;
@@ -808,7 +884,6 @@ inline void tapetums::WASAPI::Device::MainLoop()
 // ユーティリティ関数
 //---------------------------------------------------------------------------//
 
-// デバイスに無音を書き込む
 inline HRESULT tapetums::WASAPI::WriteSilence
 (
     IAudioRenderClient* renderer,
@@ -819,6 +894,7 @@ inline HRESULT tapetums::WASAPI::WriteSilence
     HRESULT hr;
     uint8_t* render_buffer;
 
+    // デバイスに無音を書き込む
     hr = renderer->GetBuffer(frame_count, &render_buffer);
     if ( FAILED(hr) )
     {
@@ -833,7 +909,6 @@ inline HRESULT tapetums::WASAPI::WriteSilence
 
 //---------------------------------------------------------------------------//
 
-// デバイスにサウンドデータを書き込む
 inline HRESULT tapetums::WASAPI::WriteBuffer
 (
     IAudioRenderClient* renderer,
@@ -845,6 +920,7 @@ inline HRESULT tapetums::WASAPI::WriteBuffer
     HRESULT hr;
     uint8_t* render_buffer;
 
+    // デバイスにサウンドデータを書き込む
     hr = renderer->GetBuffer(frame_count, &render_buffer);
     if ( FAILED(hr) )
     {
