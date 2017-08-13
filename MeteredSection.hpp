@@ -29,7 +29,7 @@
 //
 //---------------------------------------------------------------------------//
 
-class MeteredSection
+class MeteredSection final
 {
     static constexpr size_t MAX_METSECT_NAMELEN = 128;
 
@@ -55,6 +55,23 @@ private:
     METERED_SECTION     m_met_sect;
 
 public:
+    MeteredSection() noexcept { m_met_sect.lpSharedInfo = nullptr; }
+
+    MeteredSection(const MeteredSection&) = delete;
+    MeteredSection& operator =(const MeteredSection&) = delete;
+
+    MeteredSection(MeteredSection&&) noexcept = default;
+    MeteredSection& operator =(MeteredSection&&) noexcept = default;
+
+    ~MeteredSection() noexcept { Close(); }
+
+public:
+    BOOL initialized    () const noexcept { return m_met_sect.lpSharedInfo ? m_met_sect.lpSharedInfo->fInitialized    : FALSE; }
+    LONG threads_waiting() const noexcept { return m_met_sect.lpSharedInfo ? m_met_sect.lpSharedInfo->lThreadsWaiting : 0; }
+    LONG available_count() const noexcept { return m_met_sect.lpSharedInfo ? m_met_sect.lpSharedInfo->lAvailableCount : 0; }
+    LONG maximum_count  () const noexcept { return m_met_sect.lpSharedInfo ? m_met_sect.lpSharedInfo->lMaximumCount   : 0; }
+
+public:
     bool Create(LONG lInitialCount, LONG lMaximumCount, LPCSTR  lpName);
     bool Create(LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName);
 
@@ -62,11 +79,11 @@ public:
     bool Open(LPCWSTR lpName);
 
     DWORD Enter(DWORD dwMilliseconds);
-    bool  Leave(LONG lReleaseCount, LONG* lpPreviousCount);
+    bool  Leave(LONG lReleaseCount, LONG* lpPreviousCount = nullptr);
     void  Close();
 
 private:
-    bool Init           (LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName, BOOL bOpenOnly);
+    bool Initialize     (LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName, BOOL bOpenOnly);
     bool CreateSectEvent(LPCWSTR lpName, BOOL bOpenOnly);
     bool CreateFileView (LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName, BOOL bOpenOnly);
 
@@ -89,7 +106,7 @@ inline bool MeteredSection::Create
 {
     WCHAR lpNameW[MAX_PATH];
 
-    // lpName を MBCS から UTF-16 に変換
+    // Convert lpName to UTF-16 from MBCS
     ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, lpName, -1, lpNameW, MAX_PATH);
 
     return Create(lInitialCount, lMaximumCount, lpNameW);
@@ -115,7 +132,7 @@ inline bool MeteredSection::Create
     }
 
     // Initialize it
-    if ( ! Init(lInitialCount, lMaximumCount, lpName, FALSE) )
+    if ( ! Initialize(lInitialCount, lMaximumCount, lpName, FALSE) )
     {
         // Metered section failed to initialize
         Close();
@@ -134,7 +151,7 @@ inline bool MeteredSection::Open
 {
     WCHAR lpNameW [MAX_PATH];
 
-    // lpName を MBCS から UTF-16 に変換
+    // Convert lpName to UTF-16 from MBCS
     ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, lpName, -1, lpNameW, MAX_PATH);
 
     return Open(lpNameW);
@@ -147,12 +164,9 @@ inline bool MeteredSection::Open
     LPCWSTR lpName
 )
 {
-    if ( lpName == nullptr )
-    {
-        return false;
-    }
+    if ( lpName == nullptr ) { return false; }
 
-    if ( ! Init(0, 0, lpName, TRUE) )
+    if ( ! Initialize(0, 0, lpName, TRUE) )
     {
         // Metered section failed to initialize
         Close();
@@ -169,6 +183,12 @@ inline DWORD MeteredSection::Enter
     DWORD dwMilliseconds
 )
 {
+    if ( ! initialized() )
+    {
+        ::SetLastError(ERROR_NOT_READY);
+        return WAIT_FAILED;
+    }
+
     for ( ; ; )
     {
         GetLock();
@@ -187,7 +207,7 @@ inline DWORD MeteredSection::Enter
 
         ReleaseLock();
 
-        if ( WAIT_TIMEOUT == WaitForSingleObject(m_met_sect.hEvent, dwMilliseconds) )
+        if ( WAIT_TIMEOUT == ::WaitForSingleObject(m_met_sect.hEvent, dwMilliseconds) )
         {
             return WAIT_TIMEOUT;
         }
@@ -202,7 +222,12 @@ inline bool MeteredSection::Leave
     LONG* lpPreviousCount
 )
 {
-    int iCount;
+    if ( ! initialized() )
+    {
+        ::SetLastError(ERROR_NOT_READY);
+        return false;
+    }
+
     GetLock();
 
     // Save the old value if they want it
@@ -226,14 +251,11 @@ inline bool MeteredSection::Leave
     lReleaseCount = min(lReleaseCount, m_met_sect.lpSharedInfo->lThreadsWaiting);
     if ( m_met_sect.lpSharedInfo->lThreadsWaiting )
     {
-        for ( iCount = 0; iCount < lReleaseCount; ++iCount )
+        for ( int iCount = 0; iCount < lReleaseCount; ++iCount )
         {
             m_met_sect.lpSharedInfo->lThreadsWaiting--;
-        /// SetEvent(m_met_sect.hEvent);
         }
-/// }
-/// ReleaseLock();
-/// ここから追加
+
         ReleaseLock();
         ::SetEvent(m_met_sect.hEvent);
     }
@@ -241,7 +263,6 @@ inline bool MeteredSection::Leave
     {
         ReleaseLock();
     }
-/// ここまで追加
 
     return true;
 }
@@ -250,15 +271,32 @@ inline bool MeteredSection::Leave
 
 void MeteredSection::Close()
 {
+    if ( ! initialized() ) { return; }
+
+    // Block so that other threads cannot enter anymore
+    GetLock();
+
     // Clean up
-    if ( m_met_sect.lpSharedInfo) { UnmapViewOfFile(m_met_sect.lpSharedInfo ); }
-    if ( m_met_sect.hFileMap)     { CloseHandle(m_met_sect.hFileMap );         }
-    if ( m_met_sect.hEvent)       { CloseHandle(m_met_sect.hEvent );           }
+    if ( m_met_sect.lpSharedInfo )
+    {
+        ::UnmapViewOfFile(m_met_sect.lpSharedInfo );
+        m_met_sect.lpSharedInfo = nullptr;
+    }
+    if ( m_met_sect.hFileMap )
+    {
+        ::CloseHandle(m_met_sect.hFileMap );
+        m_met_sect.hFileMap = nullptr;
+    }
+    if ( m_met_sect.hEvent )
+    {
+        ::CloseHandle(m_met_sect.hEvent );
+        m_met_sect.hEvent = nullptr;
+    }
 }
 
 //---------------------------------------------------------------------------//
 
-inline bool MeteredSection::Init
+inline bool MeteredSection::Initialize
 (
     LONG    lInitialCount,
     LONG    lMaximumCount,
@@ -266,11 +304,14 @@ inline bool MeteredSection::Init
     BOOL    bOpenOnly
 )
 {
-/// ここから追加
+    if ( initialized() )
+    {
+        return false; // Already initialized
+    }
+
     m_met_sect.hEvent       = nullptr;
     m_met_sect.hFileMap     = nullptr;
     m_met_sect.lpSharedInfo = nullptr;
-/// ここまで追加
 
     // Try to create the event object
     if ( CreateSectEvent(lpName, bOpenOnly) )
@@ -298,12 +339,10 @@ inline bool MeteredSection::CreateSectEvent
 
     if ( lpName )
     {
-    /// _stprintf(sz, _T("DKC_MSECT_EVT_%s"), lpName);
         ::StringCchPrintfW(sz, MAX_PATH, L"DKC_MSECT_EVT_%s", lpName);
 
         if ( bOpenOnly )
         {
-        /// m_met_sect.hEvent = ::OpenEventW(0, FALSE, sz);
             m_met_sect.hEvent = ::OpenEventW(EVENT_ALL_ACCESS, FALSE, sz);
         }
         else
@@ -336,12 +375,10 @@ inline bool MeteredSection::CreateFileView
 
     if ( lpName )
     {
-    /// _stprintf(sz, _T("DKC_MSECT_MMF_%s"), lpName);
         ::StringCchPrintfW(sz, MAX_PATH, L"DKC_MSECT_MMF_%s", lpName);
 
         if ( bOpenOnly )
         {
-        /// m_met_sect.hFileMap = OpenFileMappingW(0, FALSE, sz);
             m_met_sect.hFileMap = ::OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, sz);
         }
         else
