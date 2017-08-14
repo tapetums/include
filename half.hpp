@@ -5,7 +5,7 @@
 // halp.hpp
 //  ヘッダファイルだけで使える半精度浮動小数点数 (C++14)
 //  Portable implementation of IEEE 754 half-precision floating-point format
-//   Copyright (C) tapetums 2015-2016
+//   Copyright (C) tapetums 2015-2017
 //
 //---------------------------------------------------------------------------//
 //
@@ -168,51 +168,52 @@ public: // limits
 private: // types
     union uif
     {
-        int32_t   i { 0 };
+        int32_t   i;
         float32_t f;
 
-        constexpr uif() noexcept = default;
+        constexpr uif() noexcept : i(0) {}
         constexpr explicit uif(int32_t   i) noexcept : i(i) {}
         constexpr explicit uif(float32_t f) noexcept : f(f) {}
     };
 
 private: // members
-    uint16_t data { 0 };
+    uint16_t data;
 
 public: // ctor / dtor
-    half() noexcept = default;
-    ~half() = default;
+    constexpr half() noexcept : data(0) {}
 
-    half(const half&)            noexcept = default;
-    half& operator=(const half&) noexcept = default;
+    constexpr half(const half&)            noexcept = default;
+    constexpr half& operator=(const half&) noexcept = default;
 
-    half(half&&)            noexcept = default;
-    half& operator=(half&&) noexcept = default;
+    constexpr half(half&&)            noexcept = default;
+    constexpr half& operator=(half&&) noexcept = default;
 
     explicit half(float32_t f) noexcept { operator =(f); }
+
+    ~half() = default;
 
 public: // operators
     constexpr half& operator +() noexcept       { return *this; }
     constexpr half  operator -() const noexcept { half h; h.data = data ^ 0x8000; return h; }
 
-    operator float32_t() const noexcept;
+    constexpr operator float32_t() const noexcept;
 
     half& operator =(float32_t) noexcept;
 
-    half& operator +=(half);
-    half& operator +=(float32_t);
+    constexpr half& operator +=(half);
+    constexpr half& operator +=(float32_t);
 
-    half& operator -=(half);
-    half& operator -=(float32_t);
+    constexpr half& operator -=(half);
+    constexpr half& operator -=(float32_t);
 
-    half& operator *=(half);
-    half& operator *=(float32_t);
+    constexpr half& operator *=(half);
+    constexpr half& operator *=(float32_t);
 
-    half& operator /=(half);
-    half& operator /=(float32_t);
+    constexpr half& operator /=(half);
+    constexpr half& operator /=(float32_t);
 
 public: // methods
-    half round(uint8_t digits) const noexcept;
+    constexpr half round(uint8_t digits) const noexcept;
 
 public: // properties
     constexpr bool is_finite()       const noexcept;
@@ -234,8 +235,8 @@ public: // constant objects
     static constexpr half NaN()      noexcept { return half::qNaN(); }
 
 public: // accessors
-    uint16_t bits()       const  noexcept { return data; }
-    half&    bits(uint16_t bits) noexcept { data = bits; return *this; }
+    constexpr uint16_t bits()       const  noexcept { return data; }
+    constexpr half&    bits(uint16_t bits) noexcept { data = bits; return *this; }
 
 private: // internal methods
     static uint16_t  convert(int32_t) noexcept;
@@ -362,7 +363,7 @@ private: // internal methods
 // Operators
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half::operator float32_t() const noexcept
+inline constexpr IEEE754::half::operator float32_t() const noexcept
 {
     if ( data == 0x0000 )
     {
@@ -418,7 +419,7 @@ inline IEEE754::half& IEEE754::half::operator =(float32_t f) noexcept
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator +=(half h)
+inline constexpr IEEE754::half& IEEE754::half::operator +=(half h)
 {
     //std::cout << "[op+=()]" << '\n';
     if ( is_NaN() )
@@ -446,7 +447,7 @@ inline IEEE754::half& IEEE754::half::operator +=(half h)
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator +=(float32_t f)
+inline constexpr IEEE754::half& IEEE754::half::operator +=(float32_t f)
 {
     //std::cout << "[op+=()]" << '\n';
     if ( is_NaN() )
@@ -474,7 +475,7 @@ inline IEEE754::half& IEEE754::half::operator +=(float32_t f)
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator -=(half h)
+inline constexpr IEEE754::half& IEEE754::half::operator -=(half h)
 {
     //std::cout << "[op-=()]" << '\n';
     if ( is_NaN() )
@@ -502,7 +503,7 @@ inline IEEE754::half& IEEE754::half::operator -=(half h)
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator -=(float32_t f)
+inline constexpr IEEE754::half& IEEE754::half::operator -=(float32_t f)
 {
     //std::cout << "[op-=()]" << '\n';
     if ( is_NaN() )
@@ -530,7 +531,7 @@ inline IEEE754::half& IEEE754::half::operator -=(float32_t f)
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator *=(half h)
+inline constexpr IEEE754::half& IEEE754::half::operator *=(half h)
 {
     //std::cout << "[op*=()]" << '\n';
     if ( is_NaN() )
@@ -558,7 +559,7 @@ inline IEEE754::half& IEEE754::half::operator *=(half h)
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator *=(float32_t f)
+inline constexpr IEEE754::half& IEEE754::half::operator *=(float32_t f)
 {
     //std::cout << "[op*=()]" << '\n';
     if ( is_NaN() )
@@ -586,7 +587,7 @@ inline IEEE754::half& IEEE754::half::operator *=(float32_t f)
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator /=(half h)
+inline constexpr IEEE754::half& IEEE754::half::operator /=(half h)
 {
     //std::cout << "[op/=()]" << '\n';
     if ( is_NaN() )
@@ -614,7 +615,7 @@ inline IEEE754::half& IEEE754::half::operator /=(half h)
 
 //---------------------------------------------------------------------------//
 
-inline IEEE754::half& IEEE754::half::operator /=(float32_t f)
+inline constexpr IEEE754::half& IEEE754::half::operator /=(float32_t f)
 {
     //std::cout << "[op/=()]" << '\n';
     if ( is_NaN() )
@@ -649,7 +650,7 @@ inline IEEE754::half& IEEE754::half::operator /=(float32_t f)
 //  After rounding, the significand's 10-n least significant
 //  bits will be zero.
 //---------------------------------------------------------
-inline IEEE754::half IEEE754::half::round(uint8_t n) const noexcept
+inline constexpr IEEE754::half IEEE754::half::round(uint8_t n) const noexcept
 {
     //std::cout << "[round()]" << '\n';
 
