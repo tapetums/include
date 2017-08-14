@@ -56,6 +56,12 @@ public:
     CtrlWnd() { static Init init; }
     ~CtrlWnd() = default;
 
+    CtrlWnd(const CtrlWnd&)             = delete;
+    CtrlWnd& operator =(const CtrlWnd&) = delete;
+
+    CtrlWnd(CtrlWnd&&)             noexcept = default;
+    CtrlWnd& operator =(CtrlWnd&&) noexcept = default;
+
 private:
     struct Init
     {
@@ -183,6 +189,12 @@ public:
     LabelWnd() { m_class_name = WC_STATIC; }
     ~LabelWnd() = default;
 
+    LabelWnd(const LabelWnd&)             = delete;
+    LabelWnd& operator =(const LabelWnd&) = delete;
+
+    LabelWnd(LabelWnd&&)             noexcept = default;
+    LabelWnd& operator =(LabelWnd&&) noexcept = default;
+
 public:
     HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
     {
@@ -201,6 +213,12 @@ class tapetums::BtnWnd : public tapetums::CtrlWnd
 public:
     BtnWnd() { m_class_name = WC_BUTTON; }
     ~BtnWnd() = default;
+
+    BtnWnd(const BtnWnd&)             = delete;
+    BtnWnd& operator =(const BtnWnd&) = delete;
+
+    BtnWnd(BtnWnd&&)             noexcept = default;
+    BtnWnd& operator =(BtnWnd&&) noexcept = default;
 
 public:
     HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
@@ -241,6 +259,12 @@ public:
     EditWnd() { m_class_name = WC_EDIT; }
     ~EditWnd() = default;
 
+    EditWnd(const EditWnd&)             = delete;
+    EditWnd& operator =(const EditWnd&) = delete;
+
+    EditWnd(EditWnd&&)             noexcept = default;
+    EditWnd& operator =(EditWnd&&) noexcept = default;
+
 public:
     HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
     {
@@ -259,6 +283,12 @@ class tapetums::ComboBox : public tapetums::CtrlWnd
 public:
     ComboBox() { m_class_name = WC_COMBOBOX; }
     ~ComboBox() = default;
+
+    ComboBox(const ComboBox&)             = delete;
+    ComboBox& operator =(const ComboBox&) = delete;
+
+    ComboBox(ComboBox&&)             noexcept = default;
+    ComboBox& operator =(ComboBox&&) noexcept = default;
 
 public:
     HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
@@ -306,6 +336,12 @@ class tapetums::ListWnd : public tapetums::CtrlWnd
 public:
     ListWnd() { m_class_name = WC_LISTVIEW; }
     ~ListWnd() = default;
+
+    ListWnd(const ListWnd&)             = delete;
+    ListWnd& operator =(const ListWnd&) = delete;
+
+    ListWnd(ListWnd&&)             noexcept = default;
+    ListWnd& operator =(ListWnd&&) noexcept = default;
 
 public:
     HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
@@ -479,6 +515,12 @@ public:
     TreeWnd() { m_class_name = WC_TREEVIEW; }
     ~TreeWnd() = default;
 
+    TreeWnd(const TreeWnd&)             = delete;
+    TreeWnd& operator =(const TreeWnd&) = delete;
+
+    TreeWnd(TreeWnd&&)             noexcept = default;
+    TreeWnd& operator =(TreeWnd&&) noexcept = default;
+
 public:
     HWND WINAPI Create(HWND hwndParent, INT16 id)
     {
@@ -548,6 +590,12 @@ public:
     TrackbarWnd() { m_class_name = TRACKBAR_CLASS; }
     ~TrackbarWnd() = default;
 
+    TrackbarWnd(const TrackbarWnd&)             = delete;
+    TrackbarWnd& operator =(const TrackbarWnd&) = delete;
+
+    TrackbarWnd(TrackbarWnd&&)             noexcept = default;
+    TrackbarWnd& operator =(TrackbarWnd&&) noexcept = default;
+
 public:
     UINT WINAPI pos() const noexcept
     {
@@ -587,6 +635,13 @@ public:
     {
         const auto style = WS_CHILD | WS_VISIBLE |
             TBS_NOTICKS | TBS_TOOLTIPS | TBS_TRANSPARENTBKGND;
+
+        return super::Create(style, hwndParent, id);
+    }
+
+    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
+    {
+        style |= WS_CHILD | WS_VISIBLE;
 
         return super::Create(style, hwndParent, id);
     }
@@ -642,6 +697,12 @@ class tapetums::DateTimeWnd : public tapetums::CtrlWnd
 public:
     DateTimeWnd() { m_class_name = DATETIMEPICK_CLASS; }
     ~DateTimeWnd() = default;
+
+    DateTimeWnd(const DateTimeWnd&)             = delete;
+    DateTimeWnd& operator =(const DateTimeWnd&) = delete;
+
+    DateTimeWnd(DateTimeWnd&&)             noexcept = default;
+    DateTimeWnd& operator =(DateTimeWnd&&) noexcept = default;
 
 public:
     HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
