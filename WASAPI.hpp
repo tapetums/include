@@ -175,7 +175,7 @@ namespace tapetums
 // RAII オブジェクト
 //---------------------------------------------------------------------------//
 
-struct tapetums::WASAPI::Lock
+struct tapetums::WASAPI::Lock final
 {
     CRITICAL_SECTION cs;
 
@@ -194,7 +194,7 @@ struct tapetums::WASAPI::Lock
 
 //---------------------------------------------------------------------------//
 
-struct tapetums::WASAPI::LockGuard
+struct tapetums::WASAPI::LockGuard final
 {
     tapetums::WASAPI::Lock& m_lock;
 
@@ -210,7 +210,7 @@ struct tapetums::WASAPI::LockGuard
 
 //---------------------------------------------------------------------------//
 
-struct tapetums::WASAPI::PropVariant
+struct tapetums::WASAPI::PropVariant final
 {
     PROPVARIANT* v;
 
@@ -228,7 +228,7 @@ struct tapetums::WASAPI::PropVariant
 // 構造体
 //---------------------------------------------------------------------------//
 
-struct tapetums::WASAPI::Config
+struct tapetums::WASAPI::Config final
 {
     WAVEFORMATEXTENSIBLE format;
     AUDCLNT_SHAREMODE    share_mode;
@@ -239,7 +239,7 @@ struct tapetums::WASAPI::Config
 // クラス
 //---------------------------------------------------------------------------//
 
-class tapetums::WASAPI::Device
+class tapetums::WASAPI::Device final
 {
     friend class Manager;
 
@@ -303,7 +303,7 @@ private:
 
 //---------------------------------------------------------------------------//
 
-class tapetums::WASAPI::Manager
+class tapetums::WASAPI::Manager final
 {
 private:
     ComPtr<IMMDeviceEnumerator> device_enumerator;

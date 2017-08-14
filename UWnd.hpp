@@ -14,6 +14,7 @@
 #include <windowsx.h>
 #include <strsafe.h>
 
+#include <shellapi.h>
 #pragma comment(lib, "shell32.lib") // Shell_NotifyIcon
 
 #ifndef WM_DPICHANGED

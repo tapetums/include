@@ -4,7 +4,7 @@
 //
 // Lock.hpp
 //  Lock の RAII クラス
-//   Copyright (C) 2015-2016 tapetums
+//   Copyright (C) 2015-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -34,7 +34,7 @@ namespace tapetums
 // Critical Section
 //---------------------------------------------------------------------------//
 
-class tapetums::CS::Lock
+class tapetums::CS::Lock final
 {
 private:
     CRITICAL_SECTION cs;
@@ -56,7 +56,7 @@ public:
 
 //---------------------------------------------------------------------------//
 
-class tapetums::CS::LockGuard
+class tapetums::CS::LockGuard final
 {
 private:
     Lock& m_lock;
@@ -79,7 +79,7 @@ public:
 // Slim Reader/Writer Lock
 //---------------------------------------------------------------------------//
 
-class tapetums::SRWL::Lock
+class tapetums::SRWL::Lock final
 {
 private:
     SRWLOCK m_srwl;
@@ -133,7 +133,7 @@ public:
 
 //---------------------------------------------------------------------------//
 
-class tapetums::SRWL::ReadGuard
+class tapetums::SRWL::ReadGuard final
 {
 private:
     Lock& m_lock;
@@ -196,7 +196,7 @@ public:
 
 //---------------------------------------------------------------------------//
 
-class tapetums::SRWL::WriteGuard
+class tapetums::SRWL::WriteGuard final
 {
 private:
     Lock& m_lock;

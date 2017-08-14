@@ -50,11 +50,11 @@ public: // ctor / dtor
     AeroWnd& operator=(AeroWnd&& rhs) noexcept = default;
 
 public: // methods
-    bool WINAPI IsCompositionEnabled() const;
-    void WINAPI EnableAero();
-    void WINAPI DisableAero();
-    void WINAPI ClearWindow(HDC hdc, HBRUSH hbr = nullptr);
-    void WINAPI CloseThemeData();
+    bool IsCompositionEnabled() const;
+    void EnableAero();
+    void DisableAero();
+    void ClearWindow(HDC hdc, HBRUSH hbr = nullptr);
+    void CloseThemeData();
 
 public: // window procedures
     LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wp, LPARAM lp) override;
@@ -99,14 +99,6 @@ inline LRESULT CALLBACK tapetums::AeroWnd::WndProc
         {
             return OnDwmCompositionChanged();
         }
-        case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            const auto hDC = ::BeginPaint(hwnd, &ps);
-            ClearWindow(hDC);
-            ::EndPaint(hwnd, &ps);
-            break;
-        }
         case WM_DESTROY:
         {
             CloseThemeData();
@@ -125,7 +117,7 @@ inline LRESULT CALLBACK tapetums::AeroWnd::WndProc
 // AeroWnd メソッド
 //---------------------------------------------------------------------------//
 
-inline bool WINAPI tapetums::AeroWnd::IsCompositionEnabled() const
+inline bool tapetums::AeroWnd::IsCompositionEnabled() const
 
 {
     BOOL is_enabled;
@@ -136,7 +128,7 @@ inline bool WINAPI tapetums::AeroWnd::IsCompositionEnabled() const
 
 //---------------------------------------------------------------------------//
 
-inline void WINAPI tapetums::AeroWnd::EnableAero()
+inline void tapetums::AeroWnd::EnableAero()
 {
     DWM_BLURBEHIND bb{ };
     bb.dwFlags = DWM_BB_ENABLE;
@@ -152,7 +144,7 @@ inline void WINAPI tapetums::AeroWnd::EnableAero()
 
 //---------------------------------------------------------------------------//
 
-inline void WINAPI tapetums::AeroWnd::DisableAero()
+inline void tapetums::AeroWnd::DisableAero()
 {
     DWM_BLURBEHIND bb{ };
     bb.dwFlags = DWM_BB_ENABLE;
@@ -168,7 +160,7 @@ inline void WINAPI tapetums::AeroWnd::DisableAero()
 
 //---------------------------------------------------------------------------//
 
-inline void WINAPI tapetums::AeroWnd::ClearWindow
+inline void tapetums::AeroWnd::ClearWindow
 (
     HDC hdc, HBRUSH hbr
 )
@@ -193,7 +185,7 @@ inline void WINAPI tapetums::AeroWnd::ClearWindow
 
 //---------------------------------------------------------------------------//
 
-inline void WINAPI tapetums::AeroWnd::CloseThemeData()
+inline void tapetums::AeroWnd::CloseThemeData()
 {
     if ( m_hTheme )
     {

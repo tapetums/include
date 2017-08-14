@@ -4,7 +4,7 @@
 //
 // SusieMgr.hpp
 //  Susie プラグイン管理クラス (C++17)
-//   Copyright (C) 2013-2016 tapetums
+//   Copyright (C) 2013-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -34,7 +34,7 @@ namespace tapetums
 //---------------------------------------------------------------------------//
 
 // Susie プラグイン管理クラス
-class tapetums::SusieMgr
+class tapetums::SusieMgr final
 {
 public:
     using value_type     = Susie;

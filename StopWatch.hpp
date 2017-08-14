@@ -4,7 +4,7 @@
 //
 // StopWatch.hpp
 //  経過時間の計測
-//   Copyright (C) 2011-2016 tapetums
+//   Copyright (C) 2011-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -19,7 +19,7 @@ namespace tapetums
 
 //---------------------------------------------------------------------------//
 
-class tapetums::StopWatch
+class tapetums::StopWatch final
 {
 private:
     INT64 frequency  { 0 };

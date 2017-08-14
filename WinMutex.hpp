@@ -4,7 +4,7 @@
 //
 // WinMutex.hpp
 //  ミューテックスのRAII
-//   Copyright (C) 2016 tapetums
+//   Copyright (C) 2016-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -17,10 +17,9 @@ namespace tapetums
     class WinMutex;
 }
 
-
 //---------------------------------------------------------------------------//
 
-class tapetums::WinMutex
+class tapetums::WinMutex final
 {
 private:
     HANDLE mutex { nullptr };
@@ -35,7 +34,7 @@ public:
     WinMutex(WinMutex&&) noexcept = delete;
     WinMutex& operator =(WinMutex&&) noexcept = delete;
 
-    explicit WinMutex(LPCTSTR name, bool own = true){ lock(name, own); }
+    explicit WinMutex(LPCTSTR name, bool own = true) { lock(name, own); }
 
 public:
     operator HANDLE() { return mutex; }

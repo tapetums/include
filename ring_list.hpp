@@ -4,7 +4,7 @@
 //
 // ring_list.hpp
 //  双方向循環リスト
-//   Copyright (C) 2014-2015 tapetums
+//   Copyright (C) 2014-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -577,7 +577,7 @@ public: // operators
         m_size = rhs.m_size;
         m_head = rhs.m_head;
 
-        rhs.m_szie = 0;
+        rhs.m_size = 0;
         rhs.m_head = nullptr;
 
         return *this;

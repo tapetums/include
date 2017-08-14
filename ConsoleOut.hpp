@@ -40,8 +40,8 @@
 // 定数
 //---------------------------------------------------------------------------//
 
-constexpr size_t TIME_BUFSIZE    { 32 };
-constexpr size_t CONSOLE_BUFSIZE { 1024 };
+static constexpr size_t TIME_BUFSIZE    { 32 };
+static constexpr size_t CONSOLE_BUFSIZE { 1024 };
 
 //---------------------------------------------------------------------------//
 // 排他ロック

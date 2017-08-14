@@ -4,7 +4,7 @@
 //
 // Susie.hpp
 //  Susie プラグイン API 定義ファイル (C++11)
-//   Copyright (C) 2013-2016 tapetums
+//   Copyright (C) 2013-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 //
@@ -329,7 +329,7 @@ namespace tapetums
 //---------------------------------------------------------------------------//
 
 // Susie プラグインのラッパークラス
-class tapetums::Susie
+class tapetums::Susie final
 {
 public:
     Susie() = default;

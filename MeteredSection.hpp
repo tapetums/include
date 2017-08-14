@@ -63,7 +63,7 @@ public:
     MeteredSection(MeteredSection&&) noexcept = default;
     MeteredSection& operator =(MeteredSection&&) noexcept = default;
 
-    ~MeteredSection() noexcept { Close(); }
+    ~MeteredSection() { Close(); }
 
 public:
     BOOL initialized    () const noexcept { return m_met_sect.lpSharedInfo ? m_met_sect.lpSharedInfo->fInitialized    : FALSE; }

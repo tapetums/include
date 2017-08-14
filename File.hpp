@@ -4,7 +4,7 @@
 //
 // File.hpp
 //  Windows ファイル RAII クラス
-//   Copyright (C) 2014-2016 tapetums
+//   Copyright (C) 2014-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -36,7 +36,7 @@ namespace tapetums
 //---------------------------------------------------------------------------//
 
 // Windows ファイル RAII クラス
-class tapetums::File
+class tapetums::File final
 {
 public:
     enum class ACCESS : DWORD

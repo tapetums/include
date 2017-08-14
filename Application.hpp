@@ -4,7 +4,7 @@
 //
 // Application.hpp
 //  メッセージループをカプセル化するクラス
-//   Copyright (C) 2013-2016 tapetums
+//   Copyright (C) 2013-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -44,8 +44,8 @@ public:
     static void  Pause();
     static void  Resume();
 
-    template<typename Updater>
-    static INT32 Run(Updater& update);
+    template<typename Updater, typename... Args>
+    static INT32 Run(Updater& update, Args&... args);
 
 private:
     static DWORD& m_thread_id() noexcept { static DWORD id   { 0 };    return id; }
@@ -77,8 +77,12 @@ inline INT32 tapetums::Application::Run()
 //---------------------------------------------------------------------------//
 
 // ゲームループ
-template<typename Updater>
-inline INT32 tapetums::Application::Run(Updater& update)
+template<typename Updater, typename... Args>
+inline INT32 tapetums::Application::Run
+(
+    Updater&  update
+    Args&...  args
+)
 {
     // 静的変数を初期化
     m_thread_id() = ::GetCurrentThreadId();
@@ -97,11 +101,14 @@ inline INT32 tapetums::Application::Run(Updater& update)
         }
         else if ( is_loop() )
         {
-            update(); // ファンクタの呼び出し
+            update(args...); // ファンクタの呼び出し
         }
         else
         {
-            ::MsgWaitForMultipleObjects(0, nullptr, FALSE, INFINITE, QS_ALLINPUT);
+            ::MsgWaitForMultipleObjects
+            (
+                0, nullptr, FALSE, INFINITE, QS_ALLINPUT
+            );
         }
     }
 
