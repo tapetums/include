@@ -10,8 +10,6 @@
 
 #include <cstdint>
 
-#include <vector>
-
 #include <gl/gl.h>
 #include <gl/glext.h>
 #pragma comment(lib, "opengl32.lib")
@@ -55,49 +53,50 @@ struct tapetums::TextureDesc
 class tapetums::OpenGLTexture
 {
 private:
-    TextureDesc          m_desc;
-    std::vector<uint8_t> m_buffer;
-    uint32_t             m_texture { 0 };
+    TextureDesc m_desc;
+    GLuint      m_texture { 0 };
 
 public:
     OpenGLTexture() = default;
     ~OpenGLTexture() { Uninit(); }
 
-    OpenGLTexture(const TextureDesc& desc, const void* const buffer, size_t size)
-    { Init(desc, buffer, size); }
+    OpenGLTexture(const OpenGLTexture&)             = delete;
+    OpenGLTexture& operator =(const OpenGLTexture&) = delete;
+    
+    OpenGLTexture(OpenGLTexture&&)             noexcept = default;
+    OpenGLTexture& operator =(OpenGLTexture&&) noexcept = default;
+
+    OpenGLTexture(const TextureDesc& desc, const void* const buffer) { Init(desc, buffer); }
 
 public:
-    const TextureDesc& desc()    const noexcept { return m_desc; }
-    const uint8_t*     buffer()  const noexcept { return m_buffer.data(); }
-    size_t             size()    const noexcept { return m_buffer.size(); }
-    uint32_t           texture() const noexcept { return m_texture; }
+    auto& desc()    const noexcept { return m_desc; }
+    auto  texture() const noexcept { return m_texture; }
 
 public:
-    void Init(const TextureDesc& desc, const void* const buffer, size_t size);
+    bool Init(const TextureDesc& desc, const void* const buffer);
     void Uninit();
 };
 
 //---------------------------------------------------------------------------//
 
-inline void tapetums::OpenGLTexture::Init
+inline bool tapetums::OpenGLTexture::Init
 (
-    const TextureDesc& desc, const void* const buffer, size_t size
+    const TextureDesc& desc, const void* const buffer
 )
 {
-    m_desc = desc;
+    if ( m_texture ) { return false; }
 
-    m_buffer.resize(size);
-    ::memcpy(m_buffer.data(), buffer, size);
+    m_desc = desc;
 
     // テクスチャを設定
     ::glGenTextures(1, &m_texture);
     if ( m_texture == 0 )
     {
-        printf("glGenTextures error: 0x%04x", glGetError());
+        return false;
     }
 
-    ::glBindTexture  (GL_TEXTURE_2D,                        m_texture);
-    ::glPixelStorei  (GL_UNPACK_ALIGNMENT,                  32 / 8);
+    ::glBindTexture  (GL_TEXTURE_2D, m_texture);
+    ::glPixelStorei  (GL_UNPACK_ALIGNMENT, 32 / 8);
     ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_desc.interpolation_min);
     ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_desc.interpolation_min);
     ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     m_desc.repeat_s);
@@ -105,11 +104,13 @@ inline void tapetums::OpenGLTexture::Init
     ::glTexEnvi      (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE,  m_desc.envi);
     ::glTexImage2D
     (
-        GL_TEXTURE_2D, 0, GL_RGBA,
+        GL_TEXTURE_2D, 0, GL_RGBA8,
         m_desc.width, m_desc.height, 0,
-        GL_BGRA, GL_UNSIGNED_BYTE, m_buffer.data()
+        GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, buffer
     );
     ::glBindTexture(GL_TEXTURE_2D, 0);
+
+    return true;
 }
 
 //---------------------------------------------------------------------------//
@@ -121,8 +122,6 @@ inline void tapetums::OpenGLTexture::Uninit()
         ::glDeleteTextures(1, &m_texture);
         m_texture = 0;
     }
-
-    m_buffer.resize(0);
 }
 
 //---------------------------------------------------------------------------//
