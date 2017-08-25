@@ -262,14 +262,17 @@ private:
     tapetums::WASAPI::Config m_config;
 
 public: // ctor / dtor
-    Device()  = default;
-    ~Device() = default;
+    Device() = default;
+    ~Device() { Close(); }
 
     Device(const Device&)             = delete;
     Device& operator =(const Device&) = delete;
 
-    Device(Device&&)             noexcept = default;
-    Device& operator =(Device&&) noexcept = default;
+    Device(Device&& rhs)             noexcept { swap(std::move(rhs)); }
+    Device& operator =(Device&& rhs) noexcept { swap(std::move(rhs)); return *this; }
+
+private:
+    void swap(Device&& rhs) noexcept;
 
 public: // properties
     auto is_open    () const noexcept { return m_client != nullptr; }
@@ -322,13 +325,15 @@ public: // ctor / dtor
     Manager& operator =(Manager&&) noexcept = default;
 
 public: // properties
+    auto is_initialized      ()           const noexcept { return device_names.size() != 0; }
     auto device_count        ()           const noexcept { return UINT(device_names.size()); }
-    auto device_name         (UINT index) const noexcept { return device_names[index].c_str(); }
+    auto device_name         (UINT index) const          { return device_names[index].c_str(); }
     auto default_device_index()           const noexcept { return default_index; }
-    auto default_device_name ()           const noexcept { return device_name(default_index); }
+    auto default_device_name ()           const          { return device_name(default_index); }
 
 public: // methods
     HRESULT Init     ();
+    void    Uninit   ();
     Device  GetDevice(UINT index);
     Device  GetDevice(LPCWSTR name);
 
@@ -353,6 +358,8 @@ inline tapetums::WASAPI::Manager::Manager()
 
 inline HRESULT tapetums::WASAPI::Manager::Init()
 {
+    if ( is_initialized() ) { return S_FALSE; }
+
     HRESULT hr;
 
     // インターフェイスを取得
@@ -449,6 +456,16 @@ inline HRESULT tapetums::WASAPI::Manager::Init()
 
 //---------------------------------------------------------------------------//
 
+inline void tapetums::WASAPI::Manager::Uninit()
+{
+    default_index = UINT(-1);
+    device_names.clear();
+    device_collection = nullptr;
+    device_enumerator = nullptr;
+}
+
+//---------------------------------------------------------------------------//
+
 inline tapetums::WASAPI::Device tapetums::WASAPI::Manager::GetDevice
 (
     UINT index
@@ -507,6 +524,27 @@ inline tapetums::WASAPI::Device tapetums::WASAPI::Manager::GetDevice
 
 //---------------------------------------------------------------------------//
 // WASAPI::Device Methods
+//---------------------------------------------------------------------------//
+
+inline void tapetums::WASAPI::Device::swap(Device&& rhs) noexcept
+{
+    if ( this == &rhs ) { return; }
+
+    std::swap(m_device,       rhs.m_device);
+    std::swap(m_client,       rhs.m_client);
+    std::swap(m_renderer,     rhs.m_renderer);
+    std::swap(m_evt_empty,    rhs.m_evt_empty);
+    std::swap(m_latency,      rhs.m_latency);
+    std::swap(m_frame_count,  rhs.m_frame_count);
+    std::swap(m_buf_size,     rhs.m_buf_size);
+    std::swap(m_listener,     rhs.m_listener);
+    std::swap(m_loop,         rhs.m_loop);
+    std::swap(m_lock,         rhs.m_lock);
+    std::swap(m_thread_write, rhs.m_thread_write);
+    std::swap(m_buffer,       rhs.m_buffer);
+    std::swap(m_config,       rhs.m_config);
+}
+
 //---------------------------------------------------------------------------//
 
 inline HRESULT tapetums::WASAPI::Device::Open
