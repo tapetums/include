@@ -3,8 +3,8 @@
 //---------------------------------------------------------------------------//
 //
 // UWnd.hpp
-//  ウィンドウをカプセル化するクラス
-//   Copyright (C) 2005-2016 tapetums
+//  Class to capsulize window objects
+//   Copyright (C) 2005-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -22,14 +22,14 @@
 #endif
 
 //---------------------------------------------------------------------------//
-// グローバル変数
+// Global Variables
 //---------------------------------------------------------------------------//
 
-extern UINT WM_NOTIFYICON;     // 使用の際は実体定義が必要 (WinMain.cpp 内を推奨)
-extern UINT WM_TASKBARCREATED; // 使用の際は実体定義が必要 (WinMain.cpp 内を推奨)
+extern UINT WM_NOTIFYICON;     // Declare the entity somewhere before use
+extern UINT WM_TASKBARCREATED; // Declare the entity somewhere before use
 
 //---------------------------------------------------------------------------//
-// 前方宣言
+// Forward Declarations
 //---------------------------------------------------------------------------//
 
 namespace tapetums
@@ -45,36 +45,19 @@ namespace tapetums
 }
 
 //---------------------------------------------------------------------------//
-// クラス
+// Classes
 //---------------------------------------------------------------------------//
 
-// ウィンドウの基底クラス
 class tapetums::UWnd
 {
 private: // static members
-    static constexpr LPCTSTR class_name { TEXT("UWnd") };
+    static constexpr LPCTSTR uwnd_class_name { TEXT("UWnd") };
 
 protected: // members
-    INT32   m_x             { CW_USEDEFAULT };
-    INT32   m_y             { CW_USEDEFAULT };
-    INT32   m_w             { CW_USEDEFAULT };
-    INT32   m_h             { CW_USEDEFAULT };
-    LPCTSTR m_class_name    { class_name };
-    HWND    m_hwnd          { nullptr };
-    bool    m_is_fullscreen { false };
-    DWORD   m_style_old     { 0 };
-    RECT    m_rc_old        { };
+    HWND m_hwnd { nullptr };
 
 public: // accessors
-    INT32 left()          const noexcept { return m_x; }
-    INT32 top()           const noexcept { return m_y; }
-    INT32 width()         const noexcept { return m_w; }
-    INT32 height()        const noexcept { return m_h; }
-    POINT position()      const noexcept { return { m_x, m_y }; }
-    SIZE  size()          const noexcept { return { m_w, m_h }; }
-    RECT  rect()          const noexcept { return { m_x, m_y, m_x + m_w, m_y + m_h }; }
-    HWND  handle()        const noexcept { return m_hwnd; }
-    bool  is_fullscreen() const noexcept { return m_is_fullscreen; }
+    HWND handle() const noexcept { return m_hwnd; }
 
 public: // ctor / dtor
     UWnd();
@@ -83,55 +66,51 @@ public: // ctor / dtor
     UWnd(const UWnd&)             = delete;
     UWnd& operator= (const UWnd&) = delete;
 
-    UWnd(UWnd&& rhs)             noexcept { swap(std::move(rhs)); }
-    UWnd& operator =(UWnd&& rhs) noexcept { swap(std::move(rhs)); return *this; }
+    UWnd(UWnd&& rhs)             noexcept = default;
+    UWnd& operator =(UWnd&& rhs) noexcept = default;
 
-public: // mover
-    void swap(UWnd && rhs) noexcept;
-
-public: // operator
+public: // operators
     operator HWND() { return m_hwnd; }
 
 public: // methods
-    ATOM WINAPI Register        (LPCTSTR lpszClassName);
-    HWND WINAPI Create          (LPCTSTR lpszWindowName, DWORD style, DWORD styleEx, HWND hwndParent, HMENU hMenu);
-    void WINAPI Destroy         ();
-    void WINAPI Close           ();
-    void WINAPI Bounds          (INT32 x, INT32 y, INT32 w, INT32 h);
-    void WINAPI Hide            ();
-    void WINAPI Move            (INT32 x, INT32 y);
-    void WINAPI Refresh         ();
-    void WINAPI Resize          (INT32 w, INT32 h);
-    void WINAPI Show            ();
-    void WINAPI ToCenter        ();
-    void WINAPI ToggleFullScreen();
+    ATOM WINAPI Register(LPCTSTR lpszClassName);
+    HWND WINAPI Create  (DWORD style = WS_OVERLAPPEDWINDOW, DWORD styleEx = 0, HWND hwndParent = nullptr, HMENU hMenu = nullptr);
+    void WINAPI Destroy ();
+    void WINAPI Close   ();
+    void WINAPI Bounds  (INT32 x, INT32 y, INT32 w, INT32 h);
+    void WINAPI Hide    ();
+    void WINAPI Move    (INT32 x, INT32 y);
+    void WINAPI Refresh ();
+    void WINAPI Resize  (INT32 w, INT32 h);
+    void WINAPI Show    ();
+    void WINAPI ToCenter();
 
     bool WINAPI AddNotifyIcon     (UINT uID, HICON hIcon);
     void WINAPI DeleteNotifyIcon  (UINT uID);
     void WINAPI SetNotifyIconTip  (UINT uID, LPCTSTR szTip);
     bool WINAPI ShowNotifyIconInfo(UINT uID, DWORD dwInfoFlags, LPCTSTR szInfoTitle, LPCTSTR szInfo, UINT uTimeout = -1);
 
-    LRESULT WINAPI Send(UINT msg, WPARAM wp, LPARAM lp);
-    BOOL    WINAPI Post(UINT msg, WPARAM wp, LPARAM lp);
+    LRESULT WINAPI Send(UINT msg, WPARAM wp, LPARAM lp) const;
+    BOOL    WINAPI Post(UINT msg, WPARAM wp, LPARAM lp) const;
 
 public: // properties
-    DWORD  WINAPI GetStyle       () const noexcept;
-    DWORD  WINAPI GetStyleEx     () const noexcept;
-    HWND   WINAPI GetParent      () const noexcept;
-    HFONT  WINAPI GetFont        () const noexcept;
-    HICON  WINAPI GetWindowIcon  () const noexcept;
-    HICON  WINAPI GetWindowIconSm() const noexcept;
-    SIZE_T WINAPI GetText(TCHAR* buf, SIZE_T buf_size) const noexcept;
+    DWORD  WINAPI GetStyle       () const;
+    DWORD  WINAPI GetStyleEx     () const;
+    HWND   WINAPI GetParent      () const;
+    HFONT  WINAPI GetFont        () const;
+    HICON  WINAPI GetWindowIcon  () const;
+    HICON  WINAPI GetWindowIconSm() const;
+    SIZE_T WINAPI GetText        (TCHAR* buf, SIZE_T buf_size) const;
 
-    void WINAPI SetStyle       (DWORD style)                         noexcept;
-    void WINAPI SetStyleEx     (DWORD styleEx)                       noexcept;
-    void WINAPI SetParent      (HWND parent)                         noexcept;
-    void WINAPI SetFont        (HFONT font)                          noexcept;
-    void WINAPI SetWindowIcon  (HMODULE hInst, LPCTSTR lpszIconName) noexcept;
-    void WINAPI SetWindowIcon  (HICON hIcon, HICON hIconSm)          noexcept;
-    void WINAPI SetWindowIcon  (HICON hIcon)                         noexcept;
-    void WINAPI SetWindowIconSm(HICON hIconSm)                       noexcept;
-    void WINAPI SetText        (LPCTSTR txt)                         noexcept;
+    void WINAPI SetStyle       (DWORD style);
+    void WINAPI SetStyleEx     (DWORD styleEx);
+    void WINAPI SetParent      (HWND parent);
+    void WINAPI SetFont        (HFONT font);
+    void WINAPI SetWindowIcon  (HMODULE hInst, LPCTSTR lpszIconName);
+    void WINAPI SetWindowIcon  (HICON hIcon, HICON hIconSm);
+    void WINAPI SetWindowIcon  (HICON hIcon);
+    void WINAPI SetWindowIconSm(HICON hIconSm);
+    void WINAPI SetText        (LPCTSTR text);
 
 public: // window procedures
     static  LRESULT CALLBACK WndMapProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -139,209 +118,24 @@ public: // window procedures
 };
 
 //---------------------------------------------------------------------------//
-// ユーティリティ関数
-//---------------------------------------------------------------------------//
-
-// エラーをメッセージボックスで表示する
-inline void tapetums::ShowLastError
-(
-    LPCTSTR window_title
-)
-{
-    LPTSTR lpMsgBuf{ nullptr };
-    ::FormatMessage
-    (
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr,
-        ::GetLastError(),
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR)&lpMsgBuf,
-        0,
-        nullptr
-    );
-    ::MessageBox(nullptr, lpMsgBuf, window_title, MB_OK);
-    ::LocalFree(lpMsgBuf);
-}
-
-//---------------------------------------------------------------------------//
-
-// クライアントサイズが指定の大きさになるよう計算する
-inline void tapetums::AdjustRect
-(
-    HWND hwnd, INT32* w, INT32* h
-)
-{
-    RECT rc{ 0, 0, *w, *h };
-    const auto style   = (DWORD)::GetWindowLongPtr(hwnd, GWL_STYLE);
-    const auto styleEx = (DWORD)::GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    const auto isChild = style & WS_CHILD;
-    const BOOL hasMenu = (!isChild && ::GetMenu(hwnd)) ? TRUE : FALSE;
-
-    ::AdjustWindowRectEx(&rc, style, hasMenu, styleEx);
-    *w = rc.right  - rc.left;
-    *h = rc.bottom - rc.top;
-}
-
-//---------------------------------------------------------------------------//
-
-// ウィンドウのあるモニタのサイズを取得する
-inline void tapetums::GetRectForMonitor
-(
-    HWND hwnd, RECT* rect
-)
-{
-    const auto hMonitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-
-    MONITORINFOEX miex{ };
-    miex.cbSize = (DWORD)sizeof(MONITORINFOEX);
-    ::GetMonitorInfo(hMonitor, &miex);
-
-    *rect = miex.rcMonitor;
-}
-
-// 画面上のある点におけるモニタのサイズを取得する
-inline void tapetums::GetRectForMonitor
-(
-    const POINT& pt, RECT* rect
-)
-{
-    const auto hMonitor = ::MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
-
-    MONITORINFOEX miex{ };
-    miex.cbSize = (DWORD)sizeof(MONITORINFOEX);
-    ::GetMonitorInfo(hMonitor, &miex);
-
-    *rect = miex.rcMonitor;
-}
-
-//---------------------------------------------------------------------------//
-
-#include <ShellScalingApi.h>
-
-// ウィンドウのあるモニタの解像度を取得する
-inline void tapetums::GetDpiForMonitor
-(
-    HWND hwnd, POINT* dpi
-)
-{
-    static const auto Shcore = ::LoadLibraryEx
-    (
-        TEXT("Shcore.dll"), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH
-    );
-
-    using F = HRESULT (__stdcall*)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);
-    static const auto GetDpiForMonitor = (F)::GetProcAddress
-    (
-        Shcore, "GetDpiForMonitor"
-    );
-
-    if ( GetDpiForMonitor )
-    {
-        const auto hMonitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-
-        GetDpiForMonitor
-        (
-            hMonitor, MONITOR_DPI_TYPE::MDT_EFFECTIVE_DPI,
-            (UINT*)&dpi->x, (UINT*)&dpi->y
-        );
-    }
-    else
-    {
-        const auto hDC = ::GetDC(nullptr);
-        if ( hDC )
-        {
-            dpi->x = ::GetDeviceCaps(hDC, LOGPIXELSX);
-            dpi->y = ::GetDeviceCaps(hDC, LOGPIXELSY);
-
-            ::ReleaseDC(nullptr, hDC);
-        }
-    }
-}
-
-// 画面上のある点におけるモニタの解像度を取得する
-inline void tapetums::GetDpiForMonitor
-(
-    const POINT& pt, POINT* dpi
-)
-{
-    static const auto Shcore = ::LoadLibraryEx
-    (
-        TEXT("Shcore.dll"), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH
-    );
-
-    using F = HRESULT (__stdcall*)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);
-    static const auto GetDpiForMonitor = (F)::GetProcAddress
-    (
-        Shcore, "GetDpiForMonitor"
-    );
-
-    if ( GetDpiForMonitor )
-    {
-        const auto hMonitor = ::MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
-
-        GetDpiForMonitor
-        (
-            hMonitor, MONITOR_DPI_TYPE::MDT_EFFECTIVE_DPI,
-            (UINT*)&dpi->x, (UINT*)&dpi->y
-        );
-    }
-    else
-    {
-        const auto hDC = ::GetDC(nullptr);
-        if ( hDC )
-        {
-            dpi->x = ::GetDeviceCaps(hDC, LOGPIXELSX);
-            dpi->y = ::GetDeviceCaps(hDC, LOGPIXELSY);
-
-            ::ReleaseDC(nullptr, hDC);
-        }
-    }
-}
-
-//---------------------------------------------------------------------------//
-// UWnd コンストラクタ
+// UWnd ctor
 //---------------------------------------------------------------------------//
 
 inline tapetums::UWnd::UWnd()
 {
-    // 自動的に "UWnd" ウィンドウクラスを登録
     static ATOM atom { 0 };
-    if ( atom == 0 ) { atom = Register(class_name); }
+    if ( atom == 0 ) { atom = Register(uwnd_class_name); }
 }
 
 //---------------------------------------------------------------------------//
-// UWnd ムーバー
+// UWnd Methods
 //---------------------------------------------------------------------------//
 
-inline void tapetums::UWnd::swap(UWnd&& rhs) noexcept
-{
-    if ( this == &rhs ) return;
-
-    std::swap(m_x,             rhs.m_x);
-    std::swap(m_y,             rhs.m_y);
-    std::swap(m_w,             rhs.m_w);
-    std::swap(m_h,             rhs.m_h);
-    std::swap(m_class_name,    rhs.m_class_name);
-    std::swap(m_hwnd,          rhs.m_hwnd);
-    std::swap(m_is_fullscreen, rhs.m_is_fullscreen);
-    std::swap(m_style_old,     rhs.m_style_old);
-    std::swap(m_rc_old,        rhs.m_rc_old);
-}
-
-//---------------------------------------------------------------------------//
-// UWnd メソッド
-//---------------------------------------------------------------------------//
-
-// ウィンドウクラスを登録する
 inline ATOM WINAPI tapetums::UWnd::Register
 (
     LPCTSTR lpszClassName
 )
 {
-    m_class_name = lpszClassName;
-
     WNDCLASSEX wcex
     {
         sizeof(WNDCLASSEX),
@@ -362,28 +156,26 @@ inline ATOM WINAPI tapetums::UWnd::Register
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを生成する
 inline HWND WINAPI tapetums::UWnd::Create
 (
-    LPCTSTR lpszWindowName,
-    DWORD   style,
-    DWORD   styleEx,
-    HWND    hwndParent,
-    HMENU   hMenu
+    DWORD style,
+    DWORD styleEx,
+    HWND  hwndParent,
+    HMENU hMenu
 )
 {
-    if ( m_hwnd ) { return m_hwnd; } // 二重生成防止!
+    if ( m_hwnd ) { return m_hwnd; }
 
     const auto hwnd = ::CreateWindowEx
     (
-        styleEx, m_class_name, lpszWindowName, style,
+        styleEx, uwnd_class_name, nullptr, style,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
         hwndParent, hMenu, ::GetModuleHandle(nullptr),
         reinterpret_cast<LPVOID>(this)
     );
-    if ( nullptr == hwnd )
+    if ( hwnd == nullptr )
     {
-        ShowLastError(class_name);
+        ShowLastError(uwnd_class_name);
     }
     else
     {
@@ -395,18 +187,17 @@ inline HWND WINAPI tapetums::UWnd::Create
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを破棄する
 inline void WINAPI tapetums::UWnd::Destroy()
 {
-    if ( nullptr == m_hwnd ) { return; }
-
-    ::DestroyWindow(m_hwnd);
-    m_hwnd = nullptr;
+    if ( m_hwnd )
+    {
+        ::DestroyWindow(m_hwnd);
+        m_hwnd = nullptr;
+    }
 }
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを閉じる
 inline void WINAPI tapetums::UWnd::Close()
 {
     ::SendMessage(m_hwnd, WM_CLOSE, 0, 0);
@@ -414,7 +205,6 @@ inline void WINAPI tapetums::UWnd::Close()
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウの位置とサイズを設定する
 inline void WINAPI tapetums::UWnd::Bounds
 (
     INT32 x, INT32 y, INT32 w, INT32 h
@@ -432,7 +222,6 @@ inline void WINAPI tapetums::UWnd::Bounds
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを隠す
 inline void WINAPI tapetums::UWnd::Hide()
 {
     ::ShowWindowAsync(m_hwnd, SW_HIDE);
@@ -440,7 +229,6 @@ inline void WINAPI tapetums::UWnd::Hide()
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを移動する
 inline void WINAPI tapetums::UWnd::Move
 (
     INT32 x, INT32 y
@@ -456,7 +244,6 @@ inline void WINAPI tapetums::UWnd::Move
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを再描画する
 inline void WINAPI tapetums::UWnd::Refresh()
 {
     ::InvalidateRect(m_hwnd, nullptr, FALSE);
@@ -464,7 +251,6 @@ inline void WINAPI tapetums::UWnd::Refresh()
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウのサイズを設定する
 inline void WINAPI tapetums::UWnd::Resize
 (
     INT32 w, INT32 h
@@ -482,7 +268,6 @@ inline void WINAPI tapetums::UWnd::Resize
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを表示する
 inline void WINAPI tapetums::UWnd::Show()
 {
     ::ShowWindowAsync(m_hwnd, SW_SHOWNORMAL);
@@ -490,7 +275,6 @@ inline void WINAPI tapetums::UWnd::Show()
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウを画面中央に移動する
 inline void WINAPI tapetums::UWnd::ToCenter()
 {
     RECT rc;
@@ -525,63 +309,6 @@ inline void WINAPI tapetums::UWnd::ToCenter()
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウの全画面表示を切り替える
-inline void WINAPI tapetums::UWnd::ToggleFullScreen()
-{
-    m_is_fullscreen = ! m_is_fullscreen;
-
-    if ( m_is_fullscreen )
-    {
-        // ウィンドウスタイルを変更
-        m_style_old = GetStyle();
-        SetStyle(WS_VISIBLE | WS_POPUP | WS_MINIMIZEBOX);
-
-        // ウィンドウサイズを記憶
-        ::GetWindowRect(m_hwnd, &m_rc_old);
-
-        // モニタのサイズを取得
-        POINT pt;
-        ::GetCursorPos(&pt);
-
-        RECT rc;
-        GetRectForMonitor(pt, &rc);
-        const auto cx = rc.left;
-        const auto cy = rc.top;
-        const auto cw = rc.right  - rc.left;
-        const auto ch = rc.bottom - rc.top;
-
-        // 全画面にする
-        ::SetWindowPos
-        (
-            m_hwnd, nullptr,
-            cx, cy, cw, ch,
-            SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW
-        );
-    }
-    else
-    {
-        // ウィンドウスタイルを復帰
-        SetStyle(m_style_old);
-
-        // ウィンドウサイズを復帰
-        const auto cx = m_rc_old.left;
-        const auto cy = m_rc_old.top;
-        const auto cw = m_rc_old.right  - m_rc_old.left;
-        const auto ch = m_rc_old.bottom - m_rc_old.top;
-
-        // ウィンドウの位置を復帰
-        ::SetWindowPos
-        (
-            m_hwnd, nullptr,
-            cx, cy, cw, ch,
-            SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW
-        );
-    }
-}
-
-//---------------------------------------------------------------------------//
-
-// タスクトレイアイコンを設定する
 inline bool WINAPI tapetums::UWnd::AddNotifyIcon
 (
     UINT uID, HICON hIcon
@@ -637,7 +364,6 @@ inline bool WINAPI tapetums::UWnd::AddNotifyIcon
 
 //---------------------------------------------------------------------------//
 
-// タスクトレイアイコンを削除する
 inline void WINAPI tapetums::UWnd::DeleteNotifyIcon
 (
     UINT uID
@@ -654,7 +380,6 @@ inline void WINAPI tapetums::UWnd::DeleteNotifyIcon
 
 //---------------------------------------------------------------------------//
 
-// タスクトレイアイコンにツールチップを表示
 inline void WINAPI tapetums::UWnd::SetNotifyIconTip
 (
     UINT uID, LPCTSTR szTip
@@ -676,7 +401,6 @@ inline void WINAPI tapetums::UWnd::SetNotifyIconTip
 
 //---------------------------------------------------------------------------//
 
-// タスクトレイアイコンにバルーンを表示
 inline bool WINAPI tapetums::UWnd::ShowNotifyIconInfo
 (
     UINT uID, DWORD dwInfoFlags,
@@ -704,66 +428,66 @@ inline bool WINAPI tapetums::UWnd::ShowNotifyIconInfo
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウにメッセージを送る
 inline LRESULT WINAPI tapetums::UWnd::Send
 (
     UINT msg, WPARAM wp, LPARAM lp
 )
+const
 {
     return ::SendMessage(m_hwnd, msg, wp, lp);
 }
 
 //---------------------------------------------------------------------------//
 
-// ウィンドウにメッセージを送る
 inline BOOL WINAPI tapetums::UWnd::Post
 (
     UINT msg, WPARAM wp, LPARAM lp
 )
+const
 {
     return ::PostMessage(m_hwnd, msg, wp, lp);
 }
 
 //---------------------------------------------------------------------------//
-// UWnd プロパティ
+// UWnd Properties
 //---------------------------------------------------------------------------//
 
-inline DWORD WINAPI tapetums::UWnd::GetStyle() const noexcept
+inline DWORD WINAPI tapetums::UWnd::GetStyle() const
 {
     return (DWORD)::GetWindowLongPtr(m_hwnd, GWL_STYLE);
 }
 
 //---------------------------------------------------------------------------//
 
-inline DWORD WINAPI tapetums::UWnd::GetStyleEx() const noexcept
+inline DWORD WINAPI tapetums::UWnd::GetStyleEx() const
 {
     return (DWORD)::GetWindowLongPtr(m_hwnd, GWL_EXSTYLE);
 }
 
 //---------------------------------------------------------------------------//
 
-inline HWND WINAPI tapetums::UWnd::GetParent() const noexcept
+inline HWND WINAPI tapetums::UWnd::GetParent() const
 {
     return (HWND)::GetWindowLongPtr(m_hwnd, GWLP_HWNDPARENT);
 }
 
 //---------------------------------------------------------------------------//
 
-inline HFONT WINAPI tapetums::UWnd::GetFont() const noexcept
+inline HFONT WINAPI tapetums::UWnd::GetFont() const
 {
     return (HFONT)::SendMessage(m_hwnd, WM_GETFONT, 0, 0);
 }
 
 //---------------------------------------------------------------------------//
 
-inline HICON WINAPI tapetums::UWnd::GetWindowIcon() const noexcept
+inline HICON WINAPI tapetums::UWnd::GetWindowIcon() const
 {
     return (HICON)::GetClassLongPtr(m_hwnd, GCLP_HICON);
 }
 
 //---------------------------------------------------------------------------//
 
-inline HICON WINAPI tapetums::UWnd::GetWindowIconSm() const noexcept
+inline HICON WINAPI tapetums::UWnd::GetWindowIconSm() const
 {
     return (HICON)::GetClassLongPtr(m_hwnd, GCLP_HICONSM);
 }
@@ -774,11 +498,11 @@ inline SIZE_T WINAPI tapetums::UWnd::GetText
 (
     TCHAR* buf, SIZE_T buf_size
 )
-const noexcept
+const
 {
     return (SIZE_T)::SendMessage
     (
-        m_hwnd, WM_GETTEXT, (WPARAM)buf_size, (LPARAM)buf
+        m_hwnd, WM_GETTEXT, WPARAM(buf_size), LPARAM(buf)
     );
 }
 
@@ -788,9 +512,8 @@ inline void WINAPI tapetums::UWnd::SetStyle
 (
     DWORD style
 )
-noexcept
 {
-    ::SetWindowLongPtr(m_hwnd, GWL_STYLE, (LONG_PTR)style);
+    ::SetWindowLongPtr(m_hwnd, GWL_STYLE, LONG_PTR(style));
 }
 
 //---------------------------------------------------------------------------//
@@ -799,9 +522,8 @@ inline void WINAPI tapetums::UWnd::SetStyleEx
 (
     DWORD styleEx
 )
-noexcept
 {
-    ::SetWindowLongPtr(m_hwnd, GWL_EXSTYLE, (LONG_PTR)styleEx);
+    ::SetWindowLongPtr(m_hwnd, GWL_EXSTYLE, LONG_PTR(styleEx));
 }
 
 //---------------------------------------------------------------------------//
@@ -810,9 +532,8 @@ inline void WINAPI tapetums::UWnd::SetParent
 (
     HWND parent
 )
-noexcept
 {
-    ::SetWindowLongPtr(m_hwnd, GWLP_HWNDPARENT, (LONG_PTR)parent);
+    ::SetWindowLongPtr(m_hwnd, GWLP_HWNDPARENT, LONG_PTR(parent));
 }
 
 //---------------------------------------------------------------------------//
@@ -821,9 +542,8 @@ inline void WINAPI tapetums::UWnd::SetFont
 (
     HFONT font
 )
-noexcept
 {
-    ::SendMessage(m_hwnd, WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
+    ::SendMessage(m_hwnd, WM_SETFONT, WPARAM(font), LPARAM(FALSE));
 }
 
 //---------------------------------------------------------------------------//
@@ -832,7 +552,6 @@ inline void WINAPI tapetums::UWnd::SetWindowIcon
 (
     HMODULE hInst, LPCTSTR lpszIconName
 )
-noexcept
 {
     const auto hIcon = (HICON)::LoadImage
     (
@@ -855,10 +574,9 @@ inline void WINAPI tapetums::UWnd::SetWindowIcon
 (
     HICON hIcon, HICON hIconSm
 )
-noexcept
 {
-    ::SetClassLongPtr(m_hwnd, GCLP_HICON,   (LONG_PTR)hIcon);
-    ::SetClassLongPtr(m_hwnd, GCLP_HICONSM, (LONG_PTR)hIconSm);
+    ::SetClassLongPtr(m_hwnd, GCLP_HICON,   LONG_PTR(hIcon));
+    ::SetClassLongPtr(m_hwnd, GCLP_HICONSM, LONG_PTR(hIconSm));
 }
 
 //---------------------------------------------------------------------------//
@@ -867,9 +585,8 @@ inline void WINAPI tapetums::UWnd::SetWindowIcon
 (
     HICON hIcon
 )
-noexcept
 {
-    ::SetClassLongPtr(m_hwnd, GCLP_HICON, (LONG_PTR)hIcon);
+    ::SetClassLongPtr(m_hwnd, GCLP_HICON, LONG_PTR(hIcon));
 }
 
 //---------------------------------------------------------------------------//
@@ -878,27 +595,24 @@ inline void WINAPI tapetums::UWnd::SetWindowIconSm
 (
     HICON hIconSm
 )
-noexcept
 {
-    ::SetClassLongPtr(m_hwnd, GCLP_HICONSM, (LONG_PTR)hIconSm);
+    ::SetClassLongPtr(m_hwnd, GCLP_HICONSM, LONG_PTR(hIconSm));
 }
 
 //---------------------------------------------------------------------------//
 
 inline void WINAPI tapetums::UWnd::SetText
 (
-    LPCTSTR txt
+    LPCTSTR text
 )
-noexcept
 {
-    ::SendMessage(m_hwnd, WM_SETTEXT, 0, (LPARAM)txt);
+    ::SendMessage(m_hwnd, WM_SETTEXT, 0, LPARAM(text));
 }
 
 //---------------------------------------------------------------------------//
 // UWnd ウィンドウプロシージャ
 //---------------------------------------------------------------------------//
 
-// UWnd 静的ウィンドウプロシージャ
 inline LRESULT CALLBACK tapetums::UWnd::WndMapProc
 (
     HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
@@ -906,63 +620,198 @@ inline LRESULT CALLBACK tapetums::UWnd::WndMapProc
 {
     UWnd* wnd;
 
-    // UWndオブジェクトのポインタを取得
     if ( msg == WM_NCCREATE )
     {
         wnd = (UWnd*)((CREATESTRUCT*)lp)->lpCreateParams;
 
-        ::SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)wnd);
+        ::SetWindowLongPtr(hwnd, GWLP_USERDATA, LONG_PTR(wnd));
     }
     else
     {
         wnd = (UWnd*)::GetWindowLongPtr(hwnd, GWLP_USERDATA);
     }
 
-    // まだマップされていない場合はデフォルトプロシージャに投げる
-    if ( nullptr == wnd )
+    if ( wnd == nullptr )
     {
         return ::DefWindowProc(hwnd, msg, wp, lp);
     }
 
-    // メンバ変数に情報を保存
-    switch ( msg )
+    if ( msg == WM_CREATE )
     {
-        case WM_CREATE:
-        {
-            wnd->m_hwnd = hwnd; // ウィンドウハンドル
-            break;
-        }
-        case WM_MOVE:
-        {
-            wnd->m_x = GET_X_LPARAM(lp); // ウィンドウX座標
-            wnd->m_y = GET_Y_LPARAM(lp); // ウィンドウY座標
-            break;
-        }
-        case WM_SIZE:
-        {
-            wnd->m_w = LOWORD(lp); // ウィンドウ幅
-            wnd->m_h = HIWORD(lp); // ウィンドウ高
-            break;
-        }
-        default:
-        {
-            break;
-        }
+        wnd->m_hwnd = hwnd;
     }
 
-    // ウィンドウプロシージャの呼び出し
     return wnd->WndProc(hwnd, msg, wp, lp);
 }
 
 //---------------------------------------------------------------------------//
 
-// UWnd ウィンドウプロシージャ
 inline LRESULT CALLBACK tapetums::UWnd::WndProc
 (
     HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
 )
 {
     return ::DefWindowProc(hwnd, msg, wp, lp);
+}
+
+//---------------------------------------------------------------------------//
+// Utility Functions
+//---------------------------------------------------------------------------//
+
+inline void tapetums::ShowLastError
+(
+    LPCTSTR window_title
+)
+{
+    LPTSTR lpMsgBuf{ nullptr };
+    ::FormatMessage
+    (
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        ::GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        LPTSTR(&lpMsgBuf),
+        0,
+        nullptr
+    );
+    ::MessageBox(nullptr, lpMsgBuf, window_title, MB_OK);
+    ::LocalFree(lpMsgBuf);
+}
+
+//---------------------------------------------------------------------------//
+
+inline void tapetums::AdjustRect
+(
+    HWND hwnd, INT32* w, INT32* h
+)
+{
+    RECT rc{ 0, 0, *w, *h };
+    const auto style   = (DWORD)::GetWindowLongPtr(hwnd, GWL_STYLE);
+    const auto styleEx = (DWORD)::GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+    const auto isChild = style & WS_CHILD;
+    const BOOL hasMenu = (!isChild && ::GetMenu(hwnd)) ? TRUE : FALSE;
+
+    ::AdjustWindowRectEx(&rc, style, hasMenu, styleEx);
+    *w = rc.right  - rc.left;
+    *h = rc.bottom - rc.top;
+}
+
+//---------------------------------------------------------------------------//
+
+inline void tapetums::GetRectForMonitor
+(
+    HWND hwnd, RECT* rect
+)
+{
+    const auto hMonitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+
+    MONITORINFOEX miex{ };
+    miex.cbSize = (DWORD)sizeof(MONITORINFOEX);
+    ::GetMonitorInfo(hMonitor, &miex);
+
+    *rect = miex.rcMonitor;
+}
+
+//---------------------------------------------------------------------------//
+
+inline void tapetums::GetRectForMonitor
+(
+    const POINT& pt, RECT* rect
+)
+{
+    const auto hMonitor = ::MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+
+    MONITORINFOEX miex{ };
+    miex.cbSize = (DWORD)sizeof(MONITORINFOEX);
+    ::GetMonitorInfo(hMonitor, &miex);
+
+    *rect = miex.rcMonitor;
+}
+
+//---------------------------------------------------------------------------//
+
+#include <ShellScalingApi.h>
+
+inline void tapetums::GetDpiForMonitor
+(
+    HWND hwnd, POINT* dpi
+)
+{
+    static const auto Shcore = ::LoadLibraryEx
+    (
+        TEXT("Shcore.dll"), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH
+    );
+
+    using F = HRESULT (__stdcall *)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);
+    static const auto GetDpiForMonitor = (F)::GetProcAddress
+    (
+        Shcore, "GetDpiForMonitor"
+    );
+
+    if ( GetDpiForMonitor )
+    {
+        const auto hMonitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+
+        GetDpiForMonitor
+        (
+            hMonitor, MONITOR_DPI_TYPE::MDT_EFFECTIVE_DPI,
+            (UINT*)&dpi->x, (UINT*)&dpi->y
+        );
+    }
+    else
+    {
+        const auto hDC = ::GetDC(nullptr);
+        if ( hDC )
+        {
+            dpi->x = ::GetDeviceCaps(hDC, LOGPIXELSX);
+            dpi->y = ::GetDeviceCaps(hDC, LOGPIXELSY);
+
+            ::ReleaseDC(nullptr, hDC);
+        }
+    }
+}
+
+//---------------------------------------------------------------------------//
+
+inline void tapetums::GetDpiForMonitor
+(
+    const POINT& pt, POINT* dpi
+)
+{
+    static const auto Shcore = ::LoadLibraryEx
+    (
+        TEXT("Shcore.dll"), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH
+    );
+
+    using F = HRESULT (__stdcall *)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);
+    static const auto GetDpiForMonitor = (F)::GetProcAddress
+    (
+        Shcore, "GetDpiForMonitor"
+    );
+
+    if ( GetDpiForMonitor )
+    {
+        const auto hMonitor = ::MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+
+        GetDpiForMonitor
+        (
+            hMonitor, MONITOR_DPI_TYPE::MDT_EFFECTIVE_DPI,
+            (UINT*)&dpi->x, (UINT*)&dpi->y
+        );
+    }
+    else
+    {
+        const auto hDC = ::GetDC(nullptr);
+        if ( hDC )
+        {
+            dpi->x = ::GetDeviceCaps(hDC, LOGPIXELSX);
+            dpi->y = ::GetDeviceCaps(hDC, LOGPIXELSY);
+
+            ::ReleaseDC(nullptr, hDC);
+        }
+    }
 }
 
 //---------------------------------------------------------------------------//

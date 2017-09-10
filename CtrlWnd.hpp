@@ -3,8 +3,8 @@
 //---------------------------------------------------------------------------//
 //
 // CtrlWnd.hpp
-//  各種コントロールのラッパー
-//   Copyright (C) 2015-2016 tapetums
+//  Wrappers for various controls
+//   Copyright (C) 2015-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -27,6 +27,8 @@
 #endif
 
 //---------------------------------------------------------------------------//
+// Forward Declarations
+//---------------------------------------------------------------------------//
 
 namespace tapetums
 {
@@ -38,6 +40,7 @@ namespace tapetums
     class ListWnd;
     class TreeWnd;
     class TrackbarWnd;
+    class UpDownWnd;
     class DateTimeWnd;
 }
 
@@ -48,9 +51,6 @@ namespace tapetums
 class tapetums::CtrlWnd : public tapetums::UWnd
 {
     using super = UWnd;
-
-protected:
-    INT16 m_id { 0 };
 
 public:
     CtrlWnd() { static Init init; }
@@ -69,58 +69,67 @@ private:
         {
             INITCOMMONCONTROLSEX icex;
 
-            icex.dwSize = sizeof(INITCOMMONCONTROLSEX );
+            icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
             icex.dwICC  = ICC_WIN95_CLASSES | ICC_DATE_CLASSES | ICC_USEREX_CLASSES;
             ::InitCommonControlsEx(&icex);
         }
     };
 
 public:
-    INT16 id() const noexcept { return m_id; }
-
-    void id(INT16 id) noexcept
+    INT16 id() const
     {
-        m_id = id;
-        ::SetWindowLongPtr(m_hwnd, GWLP_ID, (LONG_PTR)id);
+        return (INT16)::GetWindowLongPtr(m_hwnd, GWLP_ID);
+    }
+
+    void id(INT16 id)
+    {
+        ::SetWindowLongPtr(m_hwnd, GWLP_ID, LONG_PTR(id));
     }
 
 public:
-    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
+    HWND WINAPI Create
+    (
+        LPCTSTR class_name,
+        DWORD   style,
+        DWORD   styleEx,
+        HWND    hwndParent,
+        INT16   id
+    )
     {
-        m_id = id;
+        if ( m_hwnd ) { return m_hwnd; }
 
-        const auto hwnd = super::Create
+        style |= WS_CHILD | WS_VISIBLE;
+
+        const auto hwnd = ::CreateWindowEx
         (
-            nullptr,
-            style,
-            0,
-            hwndParent,
-            reinterpret_cast<HMENU>(id)
+            styleEx, class_name, nullptr, style,
+            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+            hwndParent, HMENU(id), ::GetModuleHandle(nullptr),
+            reinterpret_cast<LPVOID>(this)
         );
-        if ( nullptr == hwnd )
+        if ( hwnd == nullptr )
         {
             return nullptr;
         }
 
         const auto ret = ::SetWindowSubclass
         (
-            hwnd, SubclassWndProc, id, reinterpret_cast<DWORD_PTR>(this)
+            hwnd, SubclassWndProc, id, DWORD_PTR(this)
         );
-        if ( !ret )
+        if ( ret == false )
         {
             return nullptr;
         }
 
-        ::SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)this);
-
-        CREATESTRUCT cs
+        const auto cs = CREATESTRUCT
         {
             this, ::GetModuleHandle(nullptr),
-            reinterpret_cast<HMENU>(id), hwndParent,
-            m_x, m_y, m_w, m_h,
-            static_cast<LONG>(style), nullptr, m_class_name, 0
+            HMENU(id), hwndParent,
+            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+            LONG(style), nullptr, class_name, 0
         };
-        ::SendMessage(hwnd, WM_CREATE, 0, (LPARAM)&cs);
+
+        ::SendMessage(hwnd, WM_CREATE, 0, LPARAM(&cs));
 
         return hwnd;
     }
@@ -128,54 +137,28 @@ public:
 public:
     static LRESULT CALLBACK SubclassWndProc
     (
-        HWND hwnd, UINT uMsg, WPARAM wp, LPARAM lp,
-        UINT_PTR /*uIdSubclass*/, DWORD_PTR dwRefData
+        HWND hwnd, UINT msg, WPARAM wp, LPARAM lp,
+        UINT_PTR, DWORD_PTR dwRefData
     )
     {
         auto wnd = reinterpret_cast<CtrlWnd*>(dwRefData);
-        if ( nullptr == wnd )
+        if ( wnd == nullptr )
         {
-            return ::DefSubclassProc(hwnd, uMsg, wp, lp);
+            return ::DefSubclassProc(hwnd, msg, wp, lp);
         }
 
-        // メンバ変数に情報を保存
-        switch ( uMsg )
+        if ( msg == WM_CREATE )
         {
-            case WM_CREATE:
-            {
-                wnd->m_hwnd = hwnd; // ウィンドウハンドル
-                break;
-            }
-            case WM_MOVE:
-            {
-                wnd->m_x = GET_X_LPARAM(lp); // ウィンドウX座標
-                wnd->m_y = GET_Y_LPARAM(lp); // ウィンドウY座標
-                break;
-            }
-            case WM_SIZE:
-            {
-                wnd->m_w = LOWORD(lp); // ウィンドウ幅
-                wnd->m_h = HIWORD(lp); // ウィンドウ高
-                break;
-            }
-            default:
-            {
-                break;
-            }
+            wnd->m_hwnd = hwnd;
         }
 
-        // ウィンドウプロシージャの呼び出し
-        return wnd->WndProc(hwnd, uMsg, wp, lp);
+        return wnd->WndProc(hwnd, msg, wp, lp);
     }
 
 public:
-    LRESULT CALLBACK WndProc
-    (
-        HWND hwnd, UINT uMsg, WPARAM wp, LPARAM lp
-    )
-    override
+    LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) override
     {
-        return ::DefSubclassProc(hwnd, uMsg, wp, lp);
+        return ::DefSubclassProc(hwnd, msg, wp, lp);
     }
 };
 
@@ -186,7 +169,7 @@ class tapetums::LabelWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    LabelWnd() { m_class_name = WC_STATIC; }
+    LabelWnd()  = default;
     ~LabelWnd() = default;
 
     LabelWnd(const LabelWnd&)             = delete;
@@ -196,11 +179,9 @@ public:
     LabelWnd& operator =(LabelWnd&&) noexcept = default;
 
 public:
-    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        style |= WS_CHILD | WS_VISIBLE;
-
-        return super::Create(style, hwndParent, id);
+        return super::Create(WC_STATIC, style, styleEx, hwndParent, id);
     }
 };
 
@@ -211,7 +192,7 @@ class tapetums::BtnWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    BtnWnd() { m_class_name = WC_BUTTON; }
+    BtnWnd()  = default;
     ~BtnWnd() = default;
 
     BtnWnd(const BtnWnd&)             = delete;
@@ -221,11 +202,9 @@ public:
     BtnWnd& operator =(BtnWnd&&) noexcept = default;
 
 public:
-    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        style |= WS_CHILD | WS_VISIBLE;
-
-        return super::Create(style, hwndParent, id);
+        return super::Create(WC_BUTTON, style, styleEx, hwndParent, id);
     }
 
     bool WINAPI IsChecked()
@@ -233,14 +212,9 @@ public:
         return Send(BM_GETCHECK, 0, 0) ? true : false;
     }
 
-    void WINAPI Check(bool checked)
+    void WINAPI Check(UINT32 state = BST_CHECKED)
     {
-        Send(BM_SETCHECK, checked ? (WPARAM)BST_CHECKED : (WPARAM)BST_UNCHECKED, 0);
-    }
-
-    void WINAPI Check()
-    {
-        Send(BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+        Send(BM_SETCHECK, WPARAM(state), 0);
     }
 
     void WINAPI Uncheck()
@@ -256,7 +230,7 @@ class tapetums::EditWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    EditWnd() { m_class_name = WC_EDIT; }
+    EditWnd()  = default;
     ~EditWnd() = default;
 
     EditWnd(const EditWnd&)             = delete;
@@ -266,11 +240,9 @@ public:
     EditWnd& operator =(EditWnd&&) noexcept = default;
 
 public:
-    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        style |= WS_CHILD | WS_VISIBLE;
-
-        return super::Create(style, hwndParent, id);
+        return super::Create(WC_EDIT, style, styleEx, hwndParent, id);
     }
 };
 
@@ -281,7 +253,7 @@ class tapetums::ComboBox : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    ComboBox() { m_class_name = WC_COMBOBOX; }
+    ComboBox()  = default;
     ~ComboBox() = default;
 
     ComboBox(const ComboBox&)             = delete;
@@ -291,16 +263,14 @@ public:
     ComboBox& operator =(ComboBox&&) noexcept = default;
 
 public:
-    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        style |= WS_CHILD | WS_VISIBLE | WS_VSCROLL;
-
-        return super::Create(style, hwndParent, id);
+        return super::Create(WC_COMBOBOX, style, styleEx, hwndParent, id);
     }
 
     void WINAPI AddString(LPCTSTR text)
     {
-        Send(CB_ADDSTRING, 0, (LPARAM)text);
+        Send(CB_ADDSTRING, 0, LPARAM(text));
     }
 
     INT32 WINAPI SelectedIndex()
@@ -334,7 +304,7 @@ class tapetums::ListWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    ListWnd() { m_class_name = WC_LISTVIEW; }
+    ListWnd()  = default;
     ~ListWnd() = default;
 
     ListWnd(const ListWnd&)             = delete;
@@ -346,13 +316,11 @@ public:
 public:
     HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        style |= WS_CHILD | WS_VISIBLE;
+        super::Create(WC_LISTVIEW, style, 0, hwndParent, id);
 
-        const auto hwnd = super::Create(style, hwndParent, id);
+        ListView_SetExtendedListViewStyle(m_hwnd, styleEx);
 
-        ListView_SetExtendedListViewStyle(hwnd, styleEx);
-
-        return hwnd;
+        return m_hwnd;
     }
 
     INT32 WINAPI InsertColumn(LPCTSTR text, INT32 width, INT32 index = 0)
@@ -362,7 +330,8 @@ public:
         col.fmt      = LVCFMT_LEFT;
         col.cx       = width;
         col.iSubItem = index;
-        col.pszText = (LPTSTR)text;
+        col.pszText  = LPTSTR(text);
+
         return ListView_InsertColumn(m_hwnd, index , &col);
     }
 
@@ -385,6 +354,7 @@ public:
         item.iSubItem = 0;
         item.iImage   = image;
         item.lParam   = lp;
+
         return ListView_InsertItem(m_hwnd, &item) ? true : false;
     }
 
@@ -395,6 +365,7 @@ public:
         item.pszText  = (LPTSTR)text;
         item.iItem    = index;
         item.iSubItem = sub_index;
+
         return ListView_SetItem(m_hwnd, &item) ? true : false;
     }
 
@@ -512,7 +483,7 @@ class tapetums::TreeWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    TreeWnd() { m_class_name = WC_TREEVIEW; }
+    TreeWnd()  = default;
     ~TreeWnd() = default;
 
     TreeWnd(const TreeWnd&)             = delete;
@@ -522,12 +493,9 @@ public:
     TreeWnd& operator =(TreeWnd&&) noexcept = default;
 
 public:
-    HWND WINAPI Create(HWND hwndParent, INT16 id)
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        const auto style = WS_CHILD | WS_VISIBLE |
-            TVS_FULLROWSELECT | TVS_SHOWSELALWAYS;
-
-        return super::Create(style, hwndParent, id);
+        return super::Create(WC_TREEVIEW, style, styleEx, hwndParent, id);
     }
 
     HTREEITEM WINAPI InsertItem(LPCTSTR text, HTREEITEM parent = TVI_ROOT)
@@ -537,6 +505,7 @@ public:
         tvis.hInsertAfter = TVI_LAST;
         tvis.item.mask    = TVIF_TEXT;
         tvis.item.pszText = (LPTSTR)text;
+
         return TreeView_InsertItem(m_hwnd, &tvis);
     }
 
@@ -556,23 +525,15 @@ public:
     }
 
 public:
-    LRESULT CALLBACK WndProc
-    (
-        HWND hwnd, UINT uMsg, WPARAM wp, LPARAM lp
-    )
-    override
+    LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) override
     {
-        switch ( uMsg )
+        if ( msg == WM_HSCROLL || msg == WM_VSCROLL )
         {
-            case WM_HSCROLL:
-            case WM_VSCROLL:
-            {
-                return ::SendMessage(GetParent(), uMsg, wp, lp);
-            }
-            default:
-            {
-                return super::WndProc(hwnd, uMsg, wp, lp);
-            }
+            return ::SendMessage(GetParent(), msg, wp, lp);
+        }
+        else
+        {
+            return super::WndProc(hwnd, msg, wp, lp);
         }
     }
 };
@@ -587,7 +548,7 @@ public:
     struct RANGE { UINT min; UINT max; };
 
 public:
-    TrackbarWnd() { m_class_name = TRACKBAR_CLASS; }
+    TrackbarWnd()  = default;
     ~TrackbarWnd() = default;
 
     TrackbarWnd(const TrackbarWnd&)             = delete;
@@ -597,14 +558,14 @@ public:
     TrackbarWnd& operator =(TrackbarWnd&&) noexcept = default;
 
 public:
-    UINT WINAPI pos() const noexcept
+    UINT WINAPI position() const noexcept
     {
         return (UINT)::SendMessage(m_hwnd, TBM_GETPOS, 0, 0);
     }
 
-    void WINAPI pos(UINT pos) noexcept
+    void WINAPI position(UINT pos) noexcept
     {
-        this->Post(TBM_SETPOS, TRUE, (LPARAM)pos);
+        Post(TBM_SETPOS, TRUE, LPARAM(pos));
     }
 
     UINT WINAPI page_size() const noexcept
@@ -614,7 +575,7 @@ public:
 
     void WINAPI page_size(UINT size) noexcept
     {
-        this->Post(TBM_SETPAGESIZE, 0, (LPARAM)size);
+        Post(TBM_SETPAGESIZE, 0, LPARAM(size));
     }
 
     RANGE WINAPI range() const noexcept
@@ -631,60 +592,98 @@ public:
     }
 
 public:
-    HWND WINAPI Create(HWND hwndParent, INT16 id)
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        const auto style = WS_CHILD | WS_VISIBLE |
-            TBS_NOTICKS | TBS_TOOLTIPS | TBS_TRANSPARENTBKGND;
-
-        return super::Create(style, hwndParent, id);
-    }
-
-    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
-    {
-        style |= WS_CHILD | WS_VISIBLE;
-
-        return super::Create(style, hwndParent, id);
+        return super::Create(TRACKBAR_CLASS, style, styleEx, hwndParent, id);
     }
 
 public:
-    LRESULT CALLBACK WndProc
-    (
-        HWND hwnd, UINT uMsg, WPARAM wp, LPARAM lp
-    )
-    override
+    LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) override
     {
-        switch ( uMsg )
+        if ( msg == WM_HSCROLL || msg == WM_VSCROLL )
         {
-            case WM_HSCROLL:
-            case WM_VSCROLL:
-            {
-                return ::SendMessage(GetParent(), uMsg, wp, lp);
-            }
-            case WM_NOTIFY:
-            {
-                return OnNotify(hwnd, uMsg, wp, lp);
-            }
-            default:
-            {
-                return super::WndProc(hwnd, uMsg, wp, lp);
-            }
+            return ::SendMessage(GetParent(), msg, wp, lp);
+        }
+        else if ( msg == WM_NOTIFY )
+        {
+            return OnNotify(hwnd, msg, wp, lp);
+        }
+        else
+        {
+            return super::WndProc(hwnd, msg, wp, lp);
         }
     }
 
 protected:
-    LRESULT CALLBACK OnNotify(HWND hwnd, UINT uMsg, WPARAM wp, LPARAM lp)
+    LRESULT CALLBACK OnNotify(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     {
-        /*if ( ! IsCompositionEnabled() )
-        {
-            return super::WndProc(hwnd, uMsg, wp, lp);
-        }*/
         const auto hdr = LPNMHDR(lp);
         if ( hdr->code != NM_CUSTOMDRAW )
         {
-            return super::WndProc(hwnd, uMsg, wp, lp);
+            return super::WndProc(hwnd, msg, wp, lp);
         }
 
-        return super::WndProc(hwnd, uMsg, wp, lp);
+        return super::WndProc(hwnd, msg, wp, lp);
+    }
+};
+
+//---------------------------------------------------------------------------//
+
+class tapetums::UpDownWnd : public tapetums::CtrlWnd
+{
+    using super = CtrlWnd;
+
+public:
+    struct RANGE { UINT min; UINT max; };
+
+public:
+    UpDownWnd()  = default;
+    ~UpDownWnd() = default;
+
+    UpDownWnd(const UpDownWnd&)             = delete;
+    UpDownWnd& operator =(const UpDownWnd&) = delete;
+
+    UpDownWnd(UpDownWnd&&)             noexcept = default;
+    UpDownWnd& operator =(UpDownWnd&&) noexcept = default;
+
+public:
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
+    {
+        return super::Create(UPDOWN_CLASS, style, styleEx, hwndParent, id);
+    }
+
+    HWND buddy()
+    {
+        return (HWND)::SendMessage(m_hwnd, UDM_GETBUDDY, WPARAM(0), LPARAM(0));
+    }
+
+    HWND buddy(HWND hBuddy)
+    {
+        return (HWND)::SendMessage(m_hwnd, UDM_SETBUDDY, WPARAM(hBuddy), LPARAM(0));
+    }
+
+    INT32 position()
+    {
+        return (INT32)::SendMessage(m_hwnd, UDM_GETPOS32, WPARAM(0), LPARAM(0));
+    }
+
+    INT32 position(INT32 value)
+    {
+        return (INT32)::SendMessage(m_hwnd, UDM_SETPOS32, WPARAM(0), LPARAM(value));
+    }
+
+    RANGE range()
+    {
+        RANGE range;
+
+        ::SendMessage(m_hwnd, UDM_GETRANGE32, WPARAM(&range.min), LPARAM(&range.max));
+
+        return range;
+    }
+
+    void range(INT32 min, INT32 max)
+    {
+        ::SendMessage(m_hwnd, UDM_SETRANGE32, WPARAM(min), LPARAM(max));
     }
 };
 
@@ -695,7 +694,7 @@ class tapetums::DateTimeWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    DateTimeWnd() { m_class_name = DATETIMEPICK_CLASS; }
+    DateTimeWnd()  = default;
     ~DateTimeWnd() = default;
 
     DateTimeWnd(const DateTimeWnd&)             = delete;
@@ -705,11 +704,9 @@ public:
     DateTimeWnd& operator =(DateTimeWnd&&) noexcept = default;
 
 public:
-    HWND WINAPI Create(DWORD style, HWND hwndParent, INT16 id)
+    HWND WINAPI Create(DWORD style, DWORD styleEx, HWND hwndParent, INT16 id)
     {
-        style |= WS_CHILD | WS_VISIBLE;
-
-        return super::Create(style, hwndParent, id);
+        return super::Create(DATETIMEPICK_CLASS, style, styleEx, hwndParent, id);
     }
 
 public:
