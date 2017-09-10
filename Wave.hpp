@@ -3,7 +3,7 @@
 //---------------------------------------------------------------------------//
 //
 // Wave.hpp
-//  音声データクラス
+//  Audio data class
 //   Copyright (C) 2013-2016 tapetums
 //
 //---------------------------------------------------------------------------//
@@ -21,17 +21,18 @@
 #pragma warning(disable: 4815)
 
 //---------------------------------------------------------------------------//
-// 前方宣言
+// Forward Declarations
 //---------------------------------------------------------------------------//
 
 namespace tapetums
 {
     class Wave;
+
     inline uint32_t MaskChannelMask(uint16_t channels);
 }
 
 //---------------------------------------------------------------------------//
-// クラス
+// Classes
 //---------------------------------------------------------------------------//
 
 class tapetums::Wave
@@ -59,7 +60,7 @@ public:
     Wave& operator =(Wave&& rhs) noexcept { swap(std::move(rhs)); return *this; }
 
 public:
-    void swap(Wave&& rhs);
+    void swap(Wave&& rhs) noexcept;
 
 public:
     auto& format() const noexcept { return wfex; }
@@ -84,11 +85,13 @@ private:
 };
 
 //---------------------------------------------------------------------------//
-// ムーブコンストラクタ
+// Wave Move Constructor
 //---------------------------------------------------------------------------//
 
-inline void tapetums::Wave::swap(Wave&& rhs)
+inline void tapetums::Wave::swap(Wave&& rhs) noexcept
 {
+    if ( this == &rhs ) { return; }
+
     std::swap(file,         rhs.file);
     std::swap(wfex,         rhs.wfex);
     std::swap(data_offset,  rhs.data_offset);
@@ -98,7 +101,7 @@ inline void tapetums::Wave::swap(Wave&& rhs)
 }
 
 //---------------------------------------------------------------------------//
-// メソッド
+// Wave Methods
 //---------------------------------------------------------------------------//
 
 inline bool tapetums::Wave::Create
@@ -196,7 +199,11 @@ inline bool tapetums::Wave::Create
 
 inline void tapetums::Wave::Dispose()
 {
-    if ( table_ds64 ) { delete[] table_ds64; table_ds64 = nullptr; }
+    if ( table_ds64 )
+    {
+        delete[] table_ds64;
+        table_ds64 = nullptr;
+    }
 
     data_size = table_length = 0;
     data_offset = nullptr;
@@ -251,7 +258,7 @@ inline bool tapetums::Wave::Save(LPCWSTR path)
 }
 
 //---------------------------------------------------------------------------//
-// 内部メソッド
+// Wave Internal Methods
 //---------------------------------------------------------------------------//
 
 inline bool tapetums::Wave::ReadAllChunks()
@@ -280,12 +287,12 @@ inline bool tapetums::Wave::ReadAllChunks()
         ::memcpy(&chunkSize, p + 4, sizeof(chunkSize));
 
         // チャンクデータの読み込み
-        if ( 0 == ::strncmp(chunkId, chunkId_ds64, sizeof(chunkId)) )
+        if ( 0 == ::memcmp(chunkId, chunkId_ds64, sizeof(chunkId)) )
         {
             // 'ds64' chunk
             ReadDataSize64Chunk(p + 8, chunkSize);
         }
-        else if ( 0 == ::strncmp(chunkId, chunkId_fmt, sizeof(chunkId)) )
+        else if ( 0 == ::memcmp(chunkId, chunkId_fmt, sizeof(chunkId)) )
         {
             // 'fmt ' chunk
             if ( ! ReadFormatChunk(p + 8) )
@@ -293,7 +300,7 @@ inline bool tapetums::Wave::ReadAllChunks()
                 return false;
             }
         }
-        else if ( 0 == strncmp(chunkId, chunkId_data, sizeof(chunkId)) )
+        else if ( 0 == memcmp(chunkId, chunkId_data, sizeof(chunkId)) )
         {
             // 'data' chunk
             if ( chunkSize < UINT32_MAX )
@@ -326,19 +333,19 @@ inline bool tapetums::Wave::ReadHeader(uint8_t* p)
     memcpy(&chunkSize, p + 4, sizeof(chunkSize));
     memcpy(riffType,   p + 8, sizeof(riffType));
 
-    if ( 0 == ::strncmp(chunkId, chunkId_RF64, sizeof(chunkId)) )
+    if ( 0 == ::memcmp(chunkId, chunkId_RF64, sizeof(chunkId)) )
     {
         if ( chunkSize != UINT32_MAX )
         {
             return false;
         }
     }
-    else if ( 0 != ::strncmp(chunkId, chunkId_RIFF, sizeof(chunkId)) )
+    else if ( 0 != ::memcmp(chunkId, chunkId_RIFF, sizeof(chunkId)) )
     {
         return false;
     }
 
-    if ( 0 != ::strncmp(riffType, riffType_WAVE, sizeof(riffType)) )
+    if ( 0 != ::memcmp(riffType, riffType_WAVE, sizeof(riffType)) )
     {
         return false;
     }
@@ -409,7 +416,7 @@ inline uint8_t* tapetums::Wave::ForwardPointer
     }
     else
     {
-        if ( 0 == strncmp(chunkId, chunkId_data, sizeof(chunkId)) )
+        if ( 0 == memcmp(chunkId, chunkId_data, sizeof(chunkId)) )
         {
             return p + 4 * sizeof(char) + sizeof(chunkSize) + data_size;
         }
@@ -431,7 +438,7 @@ inline int64_t tapetums::Wave::LookUpSizeTable(const char chunkId[4])
     for ( size_t index = 0; index < table_length; ++index )
     {
         const auto chunk = table_ds64[index];
-        if ( 0 == strncmp(chunkId, chunk.chunkId, sizeof(chunkId)) )
+        if ( 0 == memcmp(chunkId, chunk.chunkId, sizeof(chunkId)) )
         {
             return chunk.chunkSize;
         }
@@ -441,7 +448,7 @@ inline int64_t tapetums::Wave::LookUpSizeTable(const char chunkId[4])
 }
 
 //---------------------------------------------------------------------------//
-// ユーティリティ関数
+// Utility Functions
 //---------------------------------------------------------------------------//
 
 inline uint32_t tapetums::MaskChannelMask(uint16_t channels)
@@ -459,20 +466,20 @@ inline uint32_t tapetums::MaskChannelMask(uint16_t channels)
         case 4: // 4 way
         {
             return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT |
-                    SPEAKER_BACK_LEFT  | SPEAKER_BACK_RIGHT;
+                   SPEAKER_BACK_LEFT  | SPEAKER_BACK_RIGHT;
         }
         case 6: // 5.1 ch
         {
             return SPEAKER_FRONT_LEFT   | SPEAKER_FRONT_RIGHT   |
-                    SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
-                    SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT;
+                   SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                   SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT;
         }
         case 8: // 7.1 ch
         {
             return SPEAKER_FRONT_LEFT   | SPEAKER_FRONT_RIGHT   |
-                    SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
-                    SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT    |
-                    SPEAKER_SIDE_LEFT    | SPEAKER_SIDE_RIGHT;
+                   SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                   SPEAKER_BACK_LEFT    | SPEAKER_BACK_RIGHT    |
+                   SPEAKER_SIDE_LEFT    | SPEAKER_SIDE_RIGHT;
         }
         default:
         {

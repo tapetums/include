@@ -3,7 +3,7 @@
 //---------------------------------------------------------------------------//
 //
 // File.hpp
-//  Windows ファイル RAII クラス
+//  RAII class for Windows files
 //   Copyright (C) 2014-2017 tapetums
 //
 //---------------------------------------------------------------------------//
@@ -27,6 +27,8 @@
 #endif
 
 //---------------------------------------------------------------------------//
+// Forward Declarations
+//---------------------------------------------------------------------------//
 
 namespace tapetums
 {
@@ -34,8 +36,9 @@ namespace tapetums
 }
 
 //---------------------------------------------------------------------------//
+// Classes
+//---------------------------------------------------------------------------//
 
-// Windows ファイル RAII クラス
 class tapetums::File final
 {
 public:
@@ -99,20 +102,20 @@ public:
     auto size()      const noexcept { return m_size; }
 
 public:
-    bool    Open(LPCSTR  lpFileName, ACCESS accessMode, SHARE shareMode, OPEN createMode);
-    bool    Open(LPCWSTR lpFileName, ACCESS accessMode, SHARE shareMode, OPEN createMode);
-    bool    Open(LPCSTR  lpName, ACCESS accessMode);
-    bool    Open(LPCWSTR lpName, ACCESS accessMode);
-    void    Close();
-    bool    Map(ACCESS accessMode);
-    bool    Map(int64_t size, LPCSTR  lpName, ACCESS accessMode);
-    bool    Map(int64_t size, LPCWSTR lpName, ACCESS accessMode);
-    void    UnMap();
-    size_t  Read(void* buf, size_t size);
-    size_t  Write(const void* const buf, size_t size);
-    int64_t Seek(int64_t distance, ORIGIN origin = ORIGIN::BEGIN);
+    bool    Open        (LPCSTR  lpFileName, ACCESS accessMode, SHARE shareMode, OPEN createMode);
+    bool    Open        (LPCWSTR lpFileName, ACCESS accessMode, SHARE shareMode, OPEN createMode);
+    bool    Open        (LPCSTR  lpName, ACCESS accessMode);
+    bool    Open        (LPCWSTR lpName, ACCESS accessMode);
+    void    Close       ();
+    bool    Map         (ACCESS accessMode);
+    bool    Map         (int64_t size, LPCSTR  lpName, ACCESS accessMode);
+    bool    Map         (int64_t size, LPCWSTR lpName, ACCESS accessMode);
+    void    UnMap       ();
+    size_t  Read        (void* buf, size_t size);
+    size_t  Write       (const void* const buf, size_t size);
+    int64_t Seek        (int64_t distance, ORIGIN origin = ORIGIN::BEGIN);
     bool    SetEndOfFile();
-    bool    Flush(size_t dwNumberOfBytesToFlush = 0);
+    bool    Flush       (size_t dwNumberOfBytesToFlush = 0);
 
     template<typename T>
     size_t Read(T* t) { return Read(t, sizeof(T)); }
@@ -214,7 +217,7 @@ inline bool tapetums::File::Open
         accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
         FALSE, lpName
     );
-    if ( nullptr == m_map )
+    if ( m_map == nullptr )
     {
         return false;
     }
@@ -225,7 +228,7 @@ inline bool tapetums::File::Open
         accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
         0, 0, 0
     );
-    if ( nullptr == m_ptr )
+    if ( m_ptr == nullptr )
     {
         UnMap();
         return false;
@@ -250,7 +253,7 @@ inline bool tapetums::File::Open
         accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
         FALSE, lpName
     );
-    if ( nullptr == m_map )
+    if ( m_map == nullptr )
     {
         return false;
     }
@@ -261,7 +264,7 @@ inline bool tapetums::File::Open
         accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
         0, 0, 0
     );
-    if ( nullptr == m_ptr )
+    if ( m_ptr == nullptr )
     {
         UnMap();
         return false;
@@ -324,7 +327,7 @@ inline bool tapetums::File::Map
         accessMode == ACCESS::READ ? PAGE_READONLY : PAGE_READWRITE,
         li.HighPart, li.LowPart, lpName
     );
-    if ( nullptr == m_map )
+    if ( m_map == nullptr )
     {
         return false;
     }
@@ -335,7 +338,7 @@ inline bool tapetums::File::Map
         accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
         0, 0, 0
     );
-    if ( nullptr == m_ptr )
+    if ( m_ptr == nullptr )
     {
         UnMap();
         return false;
@@ -368,7 +371,7 @@ inline bool tapetums::File::Map
         accessMode == ACCESS::READ ? PAGE_READONLY : PAGE_READWRITE,
         li.HighPart, li.LowPart, lpName
     );
-    if ( nullptr == m_map )
+    if ( m_map == nullptr )
     {
         return false;
     }
@@ -379,7 +382,7 @@ inline bool tapetums::File::Map
         accessMode == ACCESS::READ ? FILE_MAP_READ : FILE_MAP_WRITE,
         0, 0, 0
     );
-    if ( nullptr == m_ptr )
+    if ( m_ptr == nullptr )
     {
         UnMap();
         return false;

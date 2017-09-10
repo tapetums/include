@@ -11,6 +11,8 @@
 #include <windows.h>
 
 //---------------------------------------------------------------------------//
+// Forward Declarations
+//---------------------------------------------------------------------------//
 
 namespace tapetums
 {
@@ -18,7 +20,7 @@ namespace tapetums
 }
 
 //---------------------------------------------------------------------------//
-// Class
+// Classes
 //---------------------------------------------------------------------------//
 
 // メッセージループをカプセル化するクラス
@@ -39,10 +41,11 @@ public:
     static bool  is_loop()   noexcept { return m_loop(); }
 
 public:
+    static bool Exit  (INT32 nExitCode = 0);
+    static void Pause ();
+    static void Resume();
+
     static INT32 Run();
-    static bool  Exit();
-    static void  Pause();
-    static void  Resume();
 
     template<typename Updater, typename... Args>
     static INT32 Run(Updater& update, Args&... args);
@@ -56,15 +59,38 @@ private:
 // Methods
 //---------------------------------------------------------------------------//
 
+// メッセージループの終了
+inline bool tapetums::Application::Exit(INT32 nExitCode)
+{
+    return ::PostThreadMessage(thread_id(), WM_QUIT, nExitCode, 0) ? true : false;
+}
+
+//---------------------------------------------------------------------------//
+
+// ゲームループを停止
+inline void tapetums::Application::Pause()
+{
+    m_loop() = false;
+}
+
+//---------------------------------------------------------------------------//
+
+// ゲームループを再開
+inline void tapetums::Application::Resume()
+{
+    m_loop() = true;
+}
+
+//---------------------------------------------------------------------------//
+
 // メッセージループ
 inline INT32 tapetums::Application::Run()
 {
     // 静的変数を初期化
     m_thread_id() = ::GetCurrentThreadId();
 
-    MSG msg;
-
     // メインループ
+    MSG msg;
     while ( ::GetMessage(&msg, nullptr, 0, 0) > 0 )
     {
         ::TranslateMessage(&msg);
@@ -88,14 +114,14 @@ inline INT32 tapetums::Application::Run
     m_thread_id() = ::GetCurrentThreadId();
     m_loop()      = true;
 
-    MSG msg;
-
     // メインループ
+    MSG msg;
     for ( ; ; )
     {
         if ( ::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) )
         {
             if ( msg.message == WM_QUIT ) { break; }
+
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
         }
@@ -113,30 +139,6 @@ inline INT32 tapetums::Application::Run
     }
 
     return static_cast<INT32>(msg.wParam);
-}
-
-//---------------------------------------------------------------------------//
-
-// メッセージループの終了
-inline bool tapetums::Application::Exit()
-{
-    return ::PostThreadMessage(thread_id(), WM_QUIT, 0, 0) ? true : false;
-}
-
-//---------------------------------------------------------------------------//
-
-// ゲームループを停止
-inline void tapetums::Application::Pause()
-{
-    m_loop() = false;
-}
-
-//---------------------------------------------------------------------------//
-
-// ゲームループを再開
-inline void tapetums::Application::Resume()
-{
-    m_loop() = true;
 }
 
 //---------------------------------------------------------------------------//

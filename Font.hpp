@@ -3,13 +3,15 @@
 //---------------------------------------------------------------------------//
 //
 // Font.hpp
-//  フォントの作成および破棄
-//   Copyright (C) 2014-2016 tapetums
+//  RAII class for Windows fonts
+//   Copyright (C) 2014-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
 #include <windows.h>
 
+//---------------------------------------------------------------------------//
+// Forward Declarations
 //---------------------------------------------------------------------------//
 
 namespace tapetums 
@@ -18,58 +20,74 @@ namespace tapetums
 }
 
 //---------------------------------------------------------------------------//
+// Classes
+//---------------------------------------------------------------------------//
 
 class tapetums::Font
 {
-private:
-    INT32   size   { 0 };
-    INT32   weight { 0 };
-    HFONT   font   { nullptr };
-    LPCTSTR name   { nullptr };
+private: // members
+    HFONT   m_font   { nullptr };
+    INT32   m_size   { 0 };
+    LPCTSTR m_name   { nullptr };
+    INT32   m_weight { 0 };
 
-public:
-    Font() noexcept = default;
-    ~Font() { free(); }
+public: // ctor / dtor
+    Font() = default;
+    ~Font() { Free(); }
 
-    Font(const Font& lhs) { create(lhs.size, lhs.name, lhs.weight); }
-    Font& operator =(const Font& lhs) { create(lhs.size, lhs.name, lhs.weight); return *this; }
+    Font(const Font& lhs)             { Create(lhs.m_size, lhs.m_name, lhs.m_weight); }
+    Font& operator =(const Font& lhs) { Create(lhs.m_size, lhs.m_name, lhs.m_weight); return *this; }
 
-    Font(Font&&) noexcept = default;
+    Font(Font&&)             noexcept = default;
     Font& operator =(Font&&) noexcept = default;
 
-    Font(INT32 font_size, LPCTSTR font_name, INT32 cWeight = FW_REGULAR) { create(font_size, font_name, cWeight); }
-
-public:
-    operator HFONT() { return font; }
-
-public:
-    HFONT create
-    (
-        INT32 font_size, LPCTSTR font_name, INT32 cWeight = FW_REGULAR
-    )
+    Font(INT32 size, LPCTSTR name, INT32 weight = FW_REGULAR)
     {
-        font = ::CreateFont
-        (
-            font_size, 0, 0, 0,
-            cWeight, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
-            font_name
-        );
-
-        if ( font )
-        {
-            size   = font_size;
-            name   = font_name;
-            weight = cWeight;
-        }
-
-        return font;
+        Create(size, name, weight);
     }
 
-    void free()
+public: // accessors
+    HFONT handle() const noexcept { return m_font; }
+
+public: // operators
+    operator HFONT() const noexcept { return m_font; }
+
+public: // methods
+    HFONT Create
+    (
+        INT32 size, LPCTSTR name, INT32 weight = FW_REGULAR
+    )
     {
-        if ( font ) { ::DeleteObject(font); font = nullptr; }
+        m_font = ::CreateFont
+        (
+            size, 0, 0, 0,
+            weight, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
+            name
+        );
+
+        if ( m_font )
+        {
+            m_size   = size;
+            m_name   = name;
+            m_weight = weight;
+        }
+
+        return m_font;
+    }
+
+    void Free()
+    {
+        m_weight = 0;
+        m_name   = nullptr;
+        m_size   = 0;
+
+        if ( m_font )
+        {
+            ::DeleteObject(m_font);
+            m_font = nullptr;
+        }
     }
 };
 

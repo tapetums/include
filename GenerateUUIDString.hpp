@@ -3,15 +3,17 @@
 
 //---------------------------------------------------------------------------//
 //
-// レジストリ形式の UUID 文字列を生成するユーティリティ関数
-//  GenerateUUIDString.hpp
-//   Copyright (C) 2013-2016 tapetums
+// GenerateUUIDString.hpp
+//  Utility functions to generate UUID string as registry form
+//   Copyright (C) 2013-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
 #include <windows.h>
 #include <strsafe.h>
 
+//---------------------------------------------------------------------------//
+// Forward Declarations
 //---------------------------------------------------------------------------//
 
 namespace tapetums
@@ -26,6 +28,8 @@ namespace tapetums
   #define GenerateUUIDString GenerateUUIDStringA
 #endif
 
+//---------------------------------------------------------------------------//
+// Functions
 //---------------------------------------------------------------------------//
 
 inline void tapetums::GenerateUUIDStringA(char* buf, size_t cch_buf)

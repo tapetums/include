@@ -3,7 +3,7 @@
 //---------------------------------------------------------------------------//
 //
 // Lock.hpp
-//  Lock の RAII クラス
+//  RAII classes for lock objects
 //   Copyright (C) 2015-2017 tapetums
 //
 //---------------------------------------------------------------------------//
@@ -40,18 +40,18 @@ private:
     CRITICAL_SECTION cs;
 
 public:
-    Lock()  noexcept { ::InitializeCriticalSection(&cs); }
-    ~Lock() noexcept { ::DeleteCriticalSection(&cs); }
+    Lock()  { ::InitializeCriticalSection(&cs); }
+    ~Lock() { ::DeleteCriticalSection(&cs); }
 
-    Lock(const Lock&) = delete;
+    Lock(const Lock&)             = delete;
     Lock& operator =(const Lock&) = delete;
 
-    Lock(Lock&& rhs) noexcept = default;
+    Lock(Lock&& rhs)            noexcept = default;
     Lock& operator=(Lock&& rhs) noexcept = default;
 
 public:
-    inline void enter() noexcept { ::EnterCriticalSection(&cs); }
-    inline void leave() noexcept { ::LeaveCriticalSection(&cs); }
+    void enter() { ::EnterCriticalSection(&cs); }
+    void leave() { ::LeaveCriticalSection(&cs); }
 };
 
 //---------------------------------------------------------------------------//
@@ -64,15 +64,15 @@ private:
 public:
     LockGuard() = delete;
 
-    LockGuard(const LockGuard&) = delete;
+    LockGuard(const LockGuard&)             = delete;
     LockGuard& operator =(const LockGuard&) = delete;
 
-    LockGuard(LockGuard&& rhs) noexcept = delete;
+    LockGuard(LockGuard&& rhs)            noexcept = delete;
     LockGuard& operator=(LockGuard&& rhs) noexcept = delete;
 
-    explicit LockGuard(Lock& lock) noexcept : m_lock(lock) { m_lock.enter(); }
+    explicit LockGuard(Lock& lock) : m_lock(lock) { m_lock.enter(); }
 
-    ~LockGuard() noexcept { m_lock.leave(); }
+    ~LockGuard() { m_lock.leave(); }
 };
 
 //---------------------------------------------------------------------------//
@@ -85,12 +85,12 @@ private:
     SRWLOCK m_srwl;
 
 public:
-    Lock() noexcept { ::InitializeSRWLock(&m_srwl); }
+    Lock() { ::InitializeSRWLock(&m_srwl); }
 
-    Lock(const Lock&) = delete;
+    Lock(const Lock&)             = delete;
     Lock& operator =(const Lock&) = delete;
 
-    Lock(Lock&&) noexcept = default;
+    Lock(Lock&&)             noexcept = default;
     Lock& operator =(Lock&&) noexcept = default;
 
     ~Lock() noexcept = default;
@@ -100,32 +100,32 @@ public:
     auto operator &() noexcept       { return &m_srwl; }
 
 public:
-    bool read_lock() noexcept
+    bool read_lock()
     {
         return ::TryAcquireSRWLockShared(&m_srwl) ? true : false;
     }
 
-    void read_lock_with_blocking() noexcept
+    void read_lock_with_blocking()
     {
         ::AcquireSRWLockShared(&m_srwl);
     }
 
-    void read_unlock() noexcept
+    void read_unlock()
     {
         ::ReleaseSRWLockShared(&m_srwl);
     }
 
-    bool write_lock() noexcept
+    bool write_lock()
     {
         return ::TryAcquireSRWLockExclusive(&m_srwl) ? true : false;
     }
 
-    void write_lock_with_blocking() noexcept
+    void write_lock_with_blocking()
     {
         ::AcquireSRWLockExclusive(&m_srwl);
     }
 
-    void write_unlock() noexcept
+    void write_unlock()
     {
         ::ReleaseSRWLockExclusive(&m_srwl);
     }
@@ -142,21 +142,21 @@ private:
 public:
     ReadGuard() noexcept = delete;
 
-    ReadGuard(const ReadGuard&) = delete;
+    ReadGuard(const ReadGuard&)             = delete;
     ReadGuard& operator =(const ReadGuard&) = delete;
 
-    ReadGuard(ReadGuard&&) noexcept = delete;
+    ReadGuard(ReadGuard&&)             noexcept = delete;
     ReadGuard& operator =(ReadGuard&&) noexcept = delete;
 
-    explicit ReadGuard(Lock& lock) : m_lock(lock) { }
+    explicit ReadGuard(Lock& lock) noexcept : m_lock(lock) { }
 
-    ~ReadGuard() noexcept { release(); }
+    ~ReadGuard() { release(); }
 
 public:
     bool is_acquired() const noexcept { return m_acquired; }
 
 public:
-    bool acquire() noexcept
+    bool acquire()
     {
         if ( is_acquired() )
         {
@@ -172,7 +172,7 @@ public:
         return true;
     }
 
-    void acquire_with_blocking() noexcept
+    void acquire_with_blocking()
     {
         if ( m_acquired )
         {
@@ -184,7 +184,7 @@ public:
         m_acquired = true;
     }
 
-    void release() noexcept
+    void release()
     {
         if ( m_acquired )
         {
@@ -205,21 +205,21 @@ private:
 public:
     WriteGuard() noexcept = delete;
 
-    WriteGuard(const WriteGuard&) = delete;
+    WriteGuard(const WriteGuard&)             = delete;
     WriteGuard& operator =(const WriteGuard&) = delete;
 
-    WriteGuard(WriteGuard&&) = delete;
+    WriteGuard(WriteGuard&&)             = delete;
     WriteGuard& operator =(WriteGuard&&) = delete;
 
-    explicit WriteGuard(Lock& lock) : m_lock(lock) { }
+    explicit WriteGuard(Lock& lock) noexcept : m_lock(lock) { }
 
-    ~WriteGuard() noexcept { release(); }
+    ~WriteGuard() { release(); }
 
 public:
     bool is_acquired() const noexcept { return m_acquired; }
 
 public:
-    bool acquire() noexcept
+    bool acquire()
     {
         if ( m_acquired )
         {
@@ -235,7 +235,7 @@ public:
         return true;
     }
 
-    void acquire_with_blocking() noexcept
+    void acquire_with_blocking()
     {
         if ( m_acquired )
         {
@@ -247,7 +247,7 @@ public:
         m_acquired = true;
     }
 
-    void release() noexcept
+    void release()
     {
         if ( m_acquired )
         {

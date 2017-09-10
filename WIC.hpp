@@ -3,8 +3,8 @@
 //---------------------------------------------------------------------------//
 //
 // WIC.hpp
-//  Windows Imaging Component のラッパー
-//   Copyright (C) 2015 tapetums
+//  Wrapper for Windows Imaging Component
+//   Copyright (C) 2015-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -43,7 +43,7 @@ inline HRESULT tapetums::WIC::Load
     LPCWSTR filename, Bitmap* bitmap
 )
 {
-    if ( nullptr == bitmap )
+    if ( bitmap == nullptr )
     {
         return E_INVALIDARG;
     }

@@ -3,8 +3,8 @@
 //---------------------------------------------------------------------------//
 //
 // Bitmap.hpp
-//  ビットマップ画像クラス
-//   Copyright (C) 2009 - 2016 tapetums
+//  Bitmap class
+//   Copyright (C) 2009-2017 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -13,16 +13,16 @@
 #include <windows.h>
 
 //---------------------------------------------------------------------------//
-// 前方宣言
+// Forward Declaration
 //---------------------------------------------------------------------------//
 
 namespace tapetums
 {
-    class  Bitmap;
+    class Bitmap;
 }
 
 //---------------------------------------------------------------------------//
-// クラス
+// Classes
 //---------------------------------------------------------------------------//
 
 class tapetums::Bitmap
@@ -61,17 +61,17 @@ private:
     void swap(Bitmap&& rhs) noexcept;
 
 public:
-    auto width()      const noexcept { return m_width; }
-    auto height()     const noexcept { return m_height; }
-    auto stride()     const noexcept { return m_stride; }
-    auto bit()        const noexcept { return m_bit_count; }
-    auto color_used() const noexcept { return m_clr_used; }
-    auto size()       const noexcept { return m_stride * m_height; }
-    auto hdc()        const noexcept { return m_hdc; }
-    auto hbitmap()    const noexcept { return m_bitmap; }
-    auto hpalette()   const noexcept { return m_palette; }
-    auto info()       const noexcept { return m_info; }
-    auto pbits()      const noexcept { return m_pbits; }
+    INT32       width()      const noexcept { return m_width; }
+    INT32       height()     const noexcept { return m_height; }
+    INT32       stride()     const noexcept { return m_stride; }
+    UINT16      bit()        const noexcept { return m_bit_count; }
+    UINT32      color_used() const noexcept { return m_clr_used; }
+    DWORD       size()       const noexcept { return m_stride * m_height; }
+    HDC         hdc()        const noexcept { return m_hdc; }
+    HBITMAP     hbitmap()    const noexcept { return m_bitmap; }
+    HPALETTE    hpalette()   const noexcept { return m_palette; }
+    BITMAPINFO* info()       const noexcept { return m_info; }
+    UINT8*      pbits()      const noexcept { return m_pbits; }
 
 public:
     bool Create(INT32 width = 1, INT32 height = 1, UINT16 bit_count = 32, UINT32 clr_used = 0);
@@ -92,7 +92,7 @@ private:
 };
 
 //---------------------------------------------------------------------------//
-// コピー / ムーブ
+// Bitmap Copy / Move
 //---------------------------------------------------------------------------//
 
 inline void tapetums::Bitmap::copy(const tapetums::Bitmap& lhs)
@@ -101,7 +101,7 @@ inline void tapetums::Bitmap::copy(const tapetums::Bitmap& lhs)
 
     if ( ! Create(lhs.m_info) ) { return; }
 
-    ::memcpy(m_pbits, lhs.m_pbits, this->size());
+    ::memcpy(m_pbits, lhs.m_pbits, size());
 }
 
 //---------------------------------------------------------------------------//
@@ -123,7 +123,7 @@ inline void tapetums::Bitmap::swap(tapetums::Bitmap&& rhs) noexcept
 }
 
 //---------------------------------------------------------------------------//
-// Bitmapメソッド
+// Bitmap Methods
 //---------------------------------------------------------------------------//
 
 inline bool tapetums::Bitmap::Create
@@ -146,7 +146,7 @@ inline bool tapetums::Bitmap::Create
     m_info->bmiHeader.biPlanes        = 1;
     m_info->bmiHeader.biBitCount      = m_bit_count;
     m_info->bmiHeader.biCompression   = BI_RGB;
-    m_info->bmiHeader.biSizeImage     = this->size();
+    m_info->bmiHeader.biSizeImage     = size();
     m_info->bmiHeader.biXPelsPerMeter = 0;
     m_info->bmiHeader.biYPelsPerMeter = 0;
     m_info->bmiHeader.biClrUsed       = m_clr_used;
@@ -383,7 +383,7 @@ inline bool tapetums::Bitmap::Save(LPCWSTR filename)
 }
 
 //---------------------------------------------------------------------------//
-// Bitmap 内部メソッド
+// Bitmap Internal Methods
 //---------------------------------------------------------------------------//
 
 inline void tapetums::Bitmap::Init

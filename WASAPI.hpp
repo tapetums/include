@@ -139,18 +139,18 @@ int32_t wmain(int32_t argc, wchar_t* argv[])
 
 #ifndef COM_PTR
   #define COM_PTR
-  #include <wrl.h>
+  #include <wrl/client.h>
   template<typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 #endif
 
 //---------------------------------------------------------------------------//
-// コールバック メッセージ
+// Clallback Message
 //---------------------------------------------------------------------------//
 
-extern UINT WM_WASAPI_CALLBACK; // 適宜 実体をどこかで定義して下さい
+extern UINT WM_WASAPI_CALLBACK; // Declare the entity somewhere before use
 
 //---------------------------------------------------------------------------//
-// 前方宣言
+// Forward Declarations
 //---------------------------------------------------------------------------//
 
 namespace tapetums
@@ -172,7 +172,7 @@ namespace tapetums
 }
 
 //---------------------------------------------------------------------------//
-// RAII オブジェクト
+// RAII Objects
 //---------------------------------------------------------------------------//
 
 struct tapetums::WASAPI::Lock final
@@ -188,8 +188,8 @@ struct tapetums::WASAPI::Lock final
     Lock(Lock&& rhs)            noexcept = default;
     Lock& operator=(Lock&& rhs) noexcept = default;
 
-    inline void enter() noexcept { ::EnterCriticalSection(&cs); }
-    inline void leave() noexcept { ::LeaveCriticalSection(&cs); }
+    void enter() { ::EnterCriticalSection(&cs); }
+    void leave() { ::LeaveCriticalSection(&cs); }
 };
 
 //---------------------------------------------------------------------------//
@@ -225,7 +225,7 @@ struct tapetums::WASAPI::PropVariant final
 };
 
 //---------------------------------------------------------------------------//
-// 構造体
+// Structures
 //---------------------------------------------------------------------------//
 
 struct tapetums::WASAPI::Config final
@@ -236,7 +236,7 @@ struct tapetums::WASAPI::Config final
 };
 
 //---------------------------------------------------------------------------//
-// クラス
+// Classes
 //---------------------------------------------------------------------------//
 
 class tapetums::WASAPI::Device final
