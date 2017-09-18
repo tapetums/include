@@ -425,7 +425,7 @@ inline bool tapetums::Bitmap::CheckHeader()
         // 対応していないヘッダ形式
         return false;
     }
-        
+
     if ( info.biCompression == BI_RGB )
     {
         switch ( m_bit_count )
@@ -491,7 +491,7 @@ inline bool tapetums::Bitmap::CreatePalette()
         // フルカラーの場合は必要なし
         return true;
     }
-        
+
     // 色数に応じて必要なメモリを確保
     const auto size = sizeof(LOGPALETTE) + m_clr_used * sizeof(PALETTEENTRY);
     auto lpLogPal = (LOGPALETTE*) new UINT8[size];
