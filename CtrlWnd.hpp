@@ -4,7 +4,7 @@
 //
 // CtrlWnd.hpp
 //  Wrappers for various controls
-//   Copyright (C) 2015-2017 tapetums
+//   Copyright (C) 2015-2018 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -268,9 +268,14 @@ public:
         return super::Create(WC_COMBOBOX, style, styleEx, hwndParent, id);
     }
 
-    void WINAPI AddString(LPCTSTR text)
+    void WINAPI AddString(LPCSTR text)
     {
-        Send(CB_ADDSTRING, 0, LPARAM(text));
+        ::SendMessageA(m_hwnd, CB_ADDSTRING, 0, LPARAM(text));
+    }
+
+    void WINAPI AddString(LPCWSTR text)
+    {
+        ::SendMessageW(m_hwnd, CB_ADDSTRING, 0, LPARAM(text));
     }
 
     INT32 WINAPI SelectedIndex()
@@ -323,50 +328,124 @@ public:
         return m_hwnd;
     }
 
-    INT32 WINAPI InsertColumn(LPCTSTR text, INT32 width, INT32 index = 0)
+    INT32 WINAPI InsertColumn
+    (
+        LPCSTR text, INT32 width, INT32 index = 0, INT32 fmt = LVCFMT_LEFT
+    )
     {
-        LVCOLUMN col;
+        LVCOLUMNA col;
         col.mask     = LVCF_FMT | LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-        col.fmt      = LVCFMT_LEFT;
+        col.fmt      = fmt;
         col.cx       = width;
         col.iSubItem = index;
-        col.pszText  = LPTSTR(text);
+        col.pszText  = LPSTR(text);
 
-        return ListView_InsertColumn(m_hwnd, index , &col);
+        return (INT32)::SendMessageA
+        (
+            m_hwnd, LVM_INSERTCOLUMNA, WPARAM(index) , LPARAM(&col)
+        );
     }
 
-    INT32 WINAPI InsertItem(LPCTSTR text, INT32 index)
+    INT32 WINAPI InsertColumn
+    (
+        LPCWSTR text, INT32 width, INT32 index = 0, INT32 fmt = LVCFMT_LEFT
+    )
+    {
+        LVCOLUMNW col;
+        col.mask     = LVCF_FMT | LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+        col.fmt      = fmt;
+        col.cx       = width;
+        col.iSubItem = index;
+        col.pszText  = LPWSTR(text);
+
+        return (INT32)::SendMessageW
+        (
+            m_hwnd, LVM_INSERTCOLUMNW, WPARAM(index) , LPARAM(&col)
+        );
+    }
+
+    INT32 WINAPI InsertItem(LPCSTR text, INT32 index)
     {
         return InsertItem(text, index, 0, 0) ? true : false;
     }
 
-    INT32 WINAPI InsertItem(LPCTSTR text, INT32 index, LPARAM lp)
+    INT32 WINAPI InsertItem(LPCWSTR text, INT32 index)
+    {
+        return InsertItem(text, index, 0, 0) ? true : false;
+    }
+
+    INT32 WINAPI InsertItem(LPCSTR text, INT32 index, LPARAM lp)
     {
         return InsertItem(text, index, 0, lp) ? true : false;
     }
 
-    INT32 WINAPI InsertItem(LPCTSTR text, INT32 index, INT32 image, LPARAM lp)
+    INT32 WINAPI InsertItem(LPCWSTR text, INT32 index, LPARAM lp)
     {
-        LVITEM item;
+        return InsertItem(text, index, 0, lp) ? true : false;
+    }
+
+    INT32 WINAPI InsertItem(LPCSTR text, INT32 index, INT32 image, LPARAM lp)
+    {
+        LVITEMA item;
         item.mask     = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM;
-        item.pszText  = (LPTSTR)text;
+        item.pszText  = LPSTR(text);
         item.iItem    = index;
         item.iSubItem = 0;
         item.iImage   = image;
         item.lParam   = lp;
 
-        return ListView_InsertItem(m_hwnd, &item) ? true : false;
+        return ::SendMessageA
+        (
+            m_hwnd, LVM_INSERTITEMA, WPARAM(0), LPARAM(&item)
+        )
+        ? true : false;
     }
 
-    INT32 WINAPI SetItem(LPCTSTR text, INT32 index, INT32 sub_index)
+    INT32 WINAPI InsertItem(LPCWSTR text, INT32 index, INT32 image, LPARAM lp)
     {
-        LVITEM item;
+        LVITEMW item;
+        item.mask     = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM;
+        item.pszText  = LPWSTR(text);
+        item.iItem    = index;
+        item.iSubItem = 0;
+        item.iImage   = image;
+        item.lParam   = lp;
+
+        return ::SendMessageW
+        (
+            m_hwnd, LVM_INSERTITEMW, WPARAM(0), LPARAM(&item)
+        )
+            ? true : false;
+    }
+
+    INT32 WINAPI SetItem(LPCSTR text, INT32 index, INT32 sub_index)
+    {
+        LVITEMA item;
         item.mask     = LVIF_TEXT;
-        item.pszText  = (LPTSTR)text;
+        item.pszText  = LPSTR(text);
         item.iItem    = index;
         item.iSubItem = sub_index;
 
-        return ListView_SetItem(m_hwnd, &item) ? true : false;
+        return ::SendMessageA
+        (
+            m_hwnd, LVM_SETITEMA, WPARAM(0), LPARAM(&item)
+        )
+        ? true : false;
+    }
+
+    INT32 WINAPI SetItem(LPCWSTR text, INT32 index, INT32 sub_index)
+    {
+        LVITEMW item;
+        item.mask     = LVIF_TEXT;
+        item.pszText  = LPWSTR(text);
+        item.iItem    = index;
+        item.iSubItem = sub_index;
+
+        return ::SendMessageW
+        (
+            m_hwnd, LVM_SETITEMW, WPARAM(0), LPARAM(&item)
+        )
+            ? true : false;
     }
 
     void WINAPI DeleteItem(INT32 index)
@@ -400,10 +479,20 @@ public:
 
     void WINAPI ClearSelect()
     {
-        ListView_SetItemState
-        (
-            m_hwnd, SelectedIndex(), 0, LVIS_SELECTED
-        );
+        INT32 index = -1;
+        while ( true )
+        {
+            index = ListView_GetNextItem
+            (
+                m_hwnd, index, LVNI_ALL | LVNI_SELECTED
+            );
+            if ( index == -1 ) { break; }
+
+            ListView_SetItemState
+            (
+                m_hwnd, index, 0, LVIS_SELECTED
+            );
+        }
     }
 
     INT32 WINAPI SelectedIndex()
@@ -411,15 +500,26 @@ public:
         return ListView_GetNextItem(m_hwnd, -1, LVNI_ALL | LVNI_SELECTED);
     }
 
-    void WINAPI GetItemText(INT32 index, INT32 sub_index, LPTSTR pszText, INT32 cchTextMax)
+    void WINAPI GetItemText(INT32 index, INT32 sub_index, LPSTR pszText, INT32 cchTextMax)
     {
-        LVITEM item;
+        LVITEMA item;
         item.mask       = LVIF_TEXT;
         item.iItem      = index;
         item.iSubItem   = sub_index;
         item.pszText    = pszText;
         item.cchTextMax = cchTextMax;
-        ListView_GetItem(m_hwnd, &item);
+        ::SendMessageA(m_hwnd, LVM_GETITEMA, WPARAM(0), LPARAM(&item));
+    }
+
+    void WINAPI GetItemText(INT32 index, INT32 sub_index, LPWSTR pszText, INT32 cchTextMax)
+    {
+        LVITEMW item;
+        item.mask       = LVIF_TEXT;
+        item.iItem      = index;
+        item.iSubItem   = sub_index;
+        item.pszText    = pszText;
+        item.cchTextMax = cchTextMax;
+        ::SendMessageW(m_hwnd, LVM_GETITEMW, WPARAM(0), LPARAM(&item));
     }
 
     INT32 WINAPI GetItemToInt(INT32 index, INT32 sub_index)
@@ -498,15 +598,32 @@ public:
         return super::Create(WC_TREEVIEW, style, styleEx, hwndParent, id);
     }
 
-    HTREEITEM WINAPI InsertItem(LPCTSTR text, HTREEITEM parent = TVI_ROOT)
+    HTREEITEM WINAPI InsertItem(LPCSTR text, HTREEITEM parent = TVI_ROOT)
     {
-        TVINSERTSTRUCT tvis;
+        TVINSERTSTRUCTA tvis;
         tvis.hParent      = parent;
         tvis.hInsertAfter = TVI_LAST;
         tvis.item.mask    = TVIF_TEXT;
-        tvis.item.pszText = (LPTSTR)text;
+        tvis.item.pszText = LPSTR(text);
 
-        return TreeView_InsertItem(m_hwnd, &tvis);
+        return (HTREEITEM)::SendMessageA
+        (
+            m_hwnd, TVM_INSERTITEMA, WPARAM(0), LPARAM(&tvis)
+        );
+    }
+
+    HTREEITEM WINAPI InsertItem(LPCWSTR text, HTREEITEM parent = TVI_ROOT)
+    {
+        TVINSERTSTRUCTW tvis;
+        tvis.hParent      = parent;
+        tvis.hInsertAfter = TVI_LAST;
+        tvis.item.mask    = TVIF_TEXT;
+        tvis.item.pszText = LPWSTR(text);
+
+        return (HTREEITEM)::SendMessageW
+        (
+            m_hwnd, TVM_INSERTITEMW, WPARAM(0), LPARAM(&tvis)
+        );
     }
 
     void WINAPI SetImageList(HIMAGELIST list)
@@ -604,26 +721,10 @@ public:
         {
             return ::SendMessage(GetParent(), msg, wp, lp);
         }
-        else if ( msg == WM_NOTIFY )
-        {
-            return OnNotify(hwnd, msg, wp, lp);
-        }
         else
         {
             return super::WndProc(hwnd, msg, wp, lp);
         }
-    }
-
-protected:
-    LRESULT CALLBACK OnNotify(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
-    {
-        const auto hdr = LPNMHDR(lp);
-        if ( hdr->code != NM_CUSTOMDRAW )
-        {
-            return super::WndProc(hwnd, msg, wp, lp);
-        }
-
-        return super::WndProc(hwnd, msg, wp, lp);
     }
 };
 
@@ -720,9 +821,14 @@ public:
         ::SendMessage(m_hwnd, DTM_SETSYSTEMTIME, 0, LPARAM(&st));
     }
 
-    void WINAPI SetFormat(LPCTSTR format)
+    void WINAPI SetFormat(LPCSTR format)
     {
-        ::SendMessage(m_hwnd, DTM_SETFORMAT, 0, LPARAM(format));
+        ::SendMessageA(m_hwnd, DTM_SETFORMATA, 0, LPARAM(format));
+    }
+
+    void WINAPI SetFormat(LPCWSTR format)
+    {
+        ::SendMessageW(m_hwnd, DTM_SETFORMATW, 0, LPARAM(format));
     }
 };
 
