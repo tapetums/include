@@ -70,7 +70,7 @@ public: // ctor / dtor
     UWnd& operator =(UWnd&& rhs) noexcept = default;
 
 public: // operators
-    operator HWND() { return m_hwnd; }
+    operator HWND() const noexcept { return m_hwnd; }
 
 public: // methods
     ATOM WINAPI Register(LPCTSTR lpszClassName);
@@ -100,7 +100,8 @@ public: // properties
     HFONT  WINAPI GetFont        () const;
     HICON  WINAPI GetWindowIcon  () const;
     HICON  WINAPI GetWindowIconSm() const;
-    SIZE_T WINAPI GetText        (TCHAR* buf, SIZE_T buf_size) const;
+    SIZE_T WINAPI GetText        (LPSTR buf, SIZE_T buf_size) const;
+    SIZE_T WINAPI GetText        (LPWSTR buf, SIZE_T buf_size) const;
 
     void WINAPI SetStyle       (DWORD style);
     void WINAPI SetStyleEx     (DWORD styleEx);
@@ -110,7 +111,8 @@ public: // properties
     void WINAPI SetWindowIcon  (HICON hIcon, HICON hIconSm);
     void WINAPI SetWindowIcon  (HICON hIcon);
     void WINAPI SetWindowIconSm(HICON hIconSm);
-    void WINAPI SetText        (LPCTSTR text);
+    void WINAPI SetText        (LPCSTR text);
+    void WINAPI SetText        (LPCWSTR text);
 
 public: // window procedures
     static  LRESULT CALLBACK WndMapProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -496,11 +498,25 @@ inline HICON WINAPI tapetums::UWnd::GetWindowIconSm() const
 
 inline SIZE_T WINAPI tapetums::UWnd::GetText
 (
-    TCHAR* buf, SIZE_T buf_size
+    LPSTR buf, SIZE_T buf_size
 )
 const
 {
-    return (SIZE_T)::SendMessage
+    return (SIZE_T)::SendMessageA
+    (
+        m_hwnd, WM_GETTEXT, WPARAM(buf_size), LPARAM(buf)
+    );
+}
+
+//---------------------------------------------------------------------------//
+
+inline SIZE_T WINAPI tapetums::UWnd::GetText
+(
+    LPWSTR buf, SIZE_T buf_size
+)
+const
+{
+    return (SIZE_T)::SendMessageW
     (
         m_hwnd, WM_GETTEXT, WPARAM(buf_size), LPARAM(buf)
     );
@@ -603,10 +619,20 @@ inline void WINAPI tapetums::UWnd::SetWindowIconSm
 
 inline void WINAPI tapetums::UWnd::SetText
 (
-    LPCTSTR text
+    LPCSTR text
 )
 {
-    ::SendMessage(m_hwnd, WM_SETTEXT, 0, LPARAM(text));
+    ::SendMessageA(m_hwnd, WM_SETTEXT, 0, LPARAM(text));
+}
+
+//---------------------------------------------------------------------------//
+
+inline void WINAPI tapetums::UWnd::SetText
+(
+    LPCWSTR text
+)
+{
+    ::SendMessageW(m_hwnd, WM_SETTEXT, 0, LPARAM(text));
 }
 
 //---------------------------------------------------------------------------//
