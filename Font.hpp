@@ -4,7 +4,7 @@
 //
 // Font.hpp
 //  RAII class for Windows fonts
-//   Copyright (C) 2014-2017 tapetums
+//   Copyright (C) 2014-2018 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -23,20 +23,17 @@ namespace tapetums
 // Classes
 //---------------------------------------------------------------------------//
 
-class tapetums::Font
+class tapetums::Font final
 {
 private: // members
-    HFONT   m_font   { nullptr };
-    INT32   m_size   { 0 };
-    LPCTSTR m_name   { nullptr };
-    INT32   m_weight { 0 };
+    HFONT m_font { nullptr };
 
 public: // ctor / dtor
     Font() = default;
     ~Font() { Free(); }
 
-    Font(const Font& lhs)             { Create(lhs.m_size, lhs.m_name, lhs.m_weight); }
-    Font& operator =(const Font& lhs) { Create(lhs.m_size, lhs.m_name, lhs.m_weight); return *this; }
+    Font(const Font& lhs)             = delete;
+    Font& operator =(const Font& lhs) = delete;
 
     Font(Font&&)             noexcept = default;
     Font& operator =(Font&&) noexcept = default;
@@ -53,43 +50,61 @@ public: // operators
     operator HFONT() const noexcept { return m_font; }
 
 public: // methods
-    HFONT Create
-    (
-        INT32 size, LPCTSTR name, INT32 weight = FW_REGULAR
-    )
-    {
-        m_font = ::CreateFont
-        (
-            size, 0, 0, 0,
-            weight, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
-            name
-        );
-
-        if ( m_font )
-        {
-            m_size   = size;
-            m_name   = name;
-            m_weight = weight;
-        }
-
-        return m_font;
-    }
-
-    void Free()
-    {
-        m_weight = 0;
-        m_name   = nullptr;
-        m_size   = 0;
-
-        if ( m_font )
-        {
-            ::DeleteObject(m_font);
-            m_font = nullptr;
-        }
-    }
+    HFONT Create(INT32 size, LPCSTR  name, INT32 weight = FW_REGULAR);
+    HFONT Create(INT32 size, LPCWSTR name, INT32 weight = FW_REGULAR);
+    void  Free();
 };
+
+//---------------------------------------------------------------------------//
+// Font Methods
+//---------------------------------------------------------------------------//
+
+inline HFONT tapetums::Font::Create
+(
+    INT32 size, LPCSTR name, INT32 weight
+)
+{
+    m_font = ::CreateFontA
+    (
+        size, 0, 0, 0,
+        weight, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
+        name
+    );
+
+    return m_font;
+}
+
+//---------------------------------------------------------------------------//
+
+inline HFONT tapetums::Font::Create
+(
+    INT32 size, LPCWSTR name, INT32 weight
+)
+{
+    m_font = ::CreateFontW
+    (
+        size, 0, 0, 0,
+        weight, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
+        name
+    );
+
+    return m_font;
+}
+
+//---------------------------------------------------------------------------//
+
+inline void tapetums::Font::Free()
+{
+    if ( m_font )
+    {
+        ::DeleteObject(m_font);
+        m_font = nullptr;
+    }
+}
 
 //---------------------------------------------------------------------------//
 
