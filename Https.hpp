@@ -3,7 +3,7 @@
 //---------------------------------------------------------------------------//
 //
 // Https.hpp
-//  WinHttp による HTTP/2 通信クラス (C++14)
+//  WinHttp による HTTP/2 通信クラス
 //   Copyright (C) 2018 tapetums
 //
 //---------------------------------------------------------------------------//
@@ -16,11 +16,11 @@
 #include <cstdio>  
 #include <iostream>
 
-int main()
-{
-    using namespace tapetums::Https;
+using namespace tapetums::https;
 
-    const auto response = SendRequest
+void sync()
+{
+    const auto response = request
     (
         HTTP::METHOD::GET,
         L"https://www.yahoo.co.jp/",
@@ -39,24 +39,26 @@ int main()
         if ( 0 == fopen_s(&fp, "index.html", "wb") )
         {
             fwrite(response.data.data(), sizeof(uint8_t), response.data.size(), fp);
+
             fclose(fp);
         }
     }
+}
 
-    static const auto callback = [](Response&& response, void* usrptr)
+void async()
+{
+    static constexpr const auto callback = [](response&& response, void* event)
     {
         std::wcout << L"HTTP STATUS CODE: " << response.code << std::endl;
 
-        std::wcout << response.url.c_str() << std::endl;
-
         std::wcout << response.data.size() << L" bytes received." << std::endl;
 
-        ::SetEvent(usrptr);
+        ::SetEvent(event);
     };
 
     const auto event = ::CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
-    PostRequest
+    request
     (
         HTTP::METHOD::GET,
         L"https://www.google.com/",
@@ -67,6 +69,13 @@ int main()
     ::WaitForSingleObject(event, INFINITE);
 
     ::CloseHandle(event);
+}
+
+int main()
+{
+    sync();
+
+    async();
 
     return 0;
 }
@@ -75,7 +84,6 @@ int main()
 #pragma endregion
 
 #include <thread>
-#include <string>
 #include <vector>
 
 #include <windows.h>
@@ -124,13 +132,13 @@ namespace HTTP
 
 namespace tapetums
 {
-    namespace Https
+    namespace https
     {
-        struct Response;
+        struct response;
 
-        using Callback = void (*)(Response&& response, void* usrptr);
+        using callback = void (*)(response&& response, void* usrptr);
 
-        Response SendRequest
+        response request
         (
             HTTP::METHOD   method,
             const wchar_t* url,
@@ -138,15 +146,27 @@ namespace tapetums
             const void*    data,
             DWORD          size
         );
-        void PostRequest
+
+        void request
         (
             HTTP::METHOD   method,
             const wchar_t* url,
             const wchar_t* header,
             const void*    data,
             DWORD          size,
-            Callback       callback,
+            callback       callback,
             void*          usrptr
+        );
+
+        template <typename Callback>
+        void request
+        (
+            HTTP::METHOD   method,
+            const wchar_t* url,
+            const wchar_t* header,
+            const void*    data,
+            DWORD          size,
+            Callback&&     callback
         );
 
         namespace internal
@@ -170,17 +190,16 @@ namespace tapetums
 // Structs
 //---------------------------------------------------------------------------//
 
-struct tapetums::Https::Response final
+struct tapetums::https::response final
 {
     DWORD                code;
-    std::wstring         url;
     std::vector<wchar_t> header;
     std::vector<uint8_t> data;
 };
 
 //---------------------------------------------------------------------------//
 
-struct tapetums::Https::internal::hinternet final
+struct tapetums::https::internal::hinternet final
 {
     HINTERNET handle { nullptr };
 
@@ -214,7 +233,7 @@ struct tapetums::Https::internal::hinternet final
 // Methods
 //---------------------------------------------------------------------------//
 
-inline tapetums::Https::Response tapetums::Https::SendRequest
+inline tapetums::https::response tapetums::https::request
 (
     HTTP::METHOD   method,
     const wchar_t* url,
@@ -223,9 +242,8 @@ inline tapetums::Https::Response tapetums::Https::SendRequest
     DWORD          size
 )
 {
-    Response response;
+    response response;
     response.code = 0;
-    response.url = url;
 
     for ( auto do_once = true; do_once; do_once = false )
     {
@@ -291,14 +309,14 @@ inline tapetums::Https::Response tapetums::Https::SendRequest
 
 //---------------------------------------------------------------------------//
 
-inline void tapetums::Https::PostRequest
+inline void tapetums::https::request
 (
     HTTP::METHOD   method,
     const wchar_t* url,
     const wchar_t* header,
     const void*    data,
     DWORD          size,
-    Callback       callback,
+    callback       callback,
     void*          usrptr
 )
 {
@@ -314,9 +332,9 @@ inline void tapetums::Https::PostRequest
 
     // Forward Data to Thread
     auto thread = std::thread
-    ([method, url = std::move(u), header = std::move(h), data = std::move(d), callback, usrptr]()
+    ([method, callback, usrptr](auto&& url, auto&& header, auto&& data)
     {
-        auto response = SendRequest
+        auto response = request
         (
             method,
             url.c_str(),
@@ -327,7 +345,49 @@ inline void tapetums::Https::PostRequest
         {
             callback(std::move(response), usrptr);
         }
-    });
+    },
+    std::move(u), std::move(h), std::move(d));
+
+    thread.detach();
+}
+
+//---------------------------------------------------------------------------//
+
+template <typename Callback>
+inline void tapetums::https::request
+(
+    HTTP::METHOD   method,
+    const wchar_t* url,
+    const wchar_t* header,
+    const void*    data,
+    DWORD          size,
+    Callback&&     callback
+)
+{
+    // Copy Data
+    std::wstring u = url ? url : L"";
+    std::wstring h = header ? header : L"";
+
+    std::vector<uint8_t> d(size);
+    if ( data )
+    {
+        ::memcpy(d.data(), data, size);
+    }
+
+    // Forward Data to Thread
+    auto thread = std::thread
+    ([method](auto&& url, auto&& header, auto&& data, auto&& callback)
+    {
+        auto response = request
+        (
+            method,
+            url.c_str(),
+            header.c_str(), data.data(), DWORD(data.size())
+        );
+
+        callback(std::move(response));
+    },
+    std::move(u), std::move(h), std::move(d), std::move(callback));
 
     thread.detach();
 }
@@ -336,7 +396,7 @@ inline void tapetums::Https::PostRequest
 // Internal Methods
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::open_session
+inline bool tapetums::https::internal::open_session
 (
     hinternet& session
 )
@@ -359,7 +419,7 @@ inline bool tapetums::Https::internal::open_session
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::crack_url
+inline bool tapetums::https::internal::crack_url
 (
     const wchar_t*        url,
     std::vector<wchar_t>* host,
@@ -387,7 +447,7 @@ inline bool tapetums::Https::internal::crack_url
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::set_option
+inline bool tapetums::https::internal::set_option
 (
     hinternet& session
 )
@@ -411,7 +471,7 @@ inline bool tapetums::Https::internal::set_option
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::connect_session
+inline bool tapetums::https::internal::connect_session
 (
     hinternet&     session,
     hinternet&     connect,
@@ -435,7 +495,7 @@ inline bool tapetums::Https::internal::connect_session
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::open_request
+inline bool tapetums::https::internal::open_request
 (
     hinternet&     connect,
     hinternet&     request,
@@ -463,7 +523,7 @@ inline bool tapetums::Https::internal::open_request
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::send_request
+inline bool tapetums::https::internal::send_request
 (
     hinternet&     request,
     const wchar_t* header,
@@ -506,7 +566,7 @@ inline bool tapetums::Https::internal::send_request
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::receive_response
+inline bool tapetums::https::internal::receive_response
 (
     hinternet& request
 )
@@ -526,7 +586,7 @@ inline bool tapetums::Https::internal::receive_response
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::query_header
+inline bool tapetums::https::internal::query_header
 (
     hinternet&            request,
     DWORD*                code,
@@ -581,7 +641,7 @@ inline bool tapetums::Https::internal::query_header
 
 //---------------------------------------------------------------------------//
 
-inline bool tapetums::Https::internal::read_data
+inline bool tapetums::https::internal::read_data
 (
     hinternet&            request,
     std::vector<uint8_t>* data
