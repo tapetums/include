@@ -4,7 +4,7 @@
 //
 // Wave.hpp
 //  Audio data class
-//   Copyright (C) 2013-2016 tapetums
+//   Copyright (C) 2013-2018 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -416,7 +416,7 @@ inline uint8_t* tapetums::Wave::ForwardPointer
     }
     else
     {
-        if ( 0 == memcmp(chunkId, chunkId_data, sizeof(chunkId)) )
+        if ( 0 == memcmp(chunkId, chunkId_data, sizeof(char) * 4) )
         {
             return p + 4 * sizeof(char) + sizeof(chunkSize) + data_size;
         }
@@ -438,7 +438,7 @@ inline int64_t tapetums::Wave::LookUpSizeTable(const char chunkId[4])
     for ( size_t index = 0; index < table_length; ++index )
     {
         const auto chunk = table_ds64[index];
-        if ( 0 == memcmp(chunkId, chunk.chunkId, sizeof(chunkId)) )
+        if ( 0 == memcmp(chunkId, chunk.chunkId, sizeof(char) * 4) )
         {
             return chunk.chunkSize;
         }

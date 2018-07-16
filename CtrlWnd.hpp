@@ -53,7 +53,7 @@ class tapetums::CtrlWnd : public tapetums::UWnd
     using super = UWnd;
 
 public:
-    CtrlWnd() { static Init init; }
+    CtrlWnd() noexcept { static Init init; }
     ~CtrlWnd() = default;
 
     CtrlWnd(const CtrlWnd&)             = delete;
@@ -65,7 +65,7 @@ public:
 private:
     struct Init
     {
-        Init()
+        Init() noexcept
         {
             INITCOMMONCONTROLSEX icex;
 
@@ -192,7 +192,7 @@ class tapetums::BtnWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    BtnWnd()  = default;
+    BtnWnd() noexcept = default;
     ~BtnWnd() = default;
 
     BtnWnd(const BtnWnd&)             = delete;
@@ -230,7 +230,7 @@ class tapetums::EditWnd : public tapetums::CtrlWnd
     using super = CtrlWnd;
 
 public:
-    EditWnd()  = default;
+    EditWnd() noexcept = default;
     ~EditWnd() = default;
 
     EditWnd(const EditWnd&)             = delete;
@@ -534,6 +534,8 @@ public:
         item.pszText    = buf;
         item.cchTextMax = cchTextMax;
         ListView_GetItem(m_hwnd, &item);
+
+        buf[cchTextMax - 1] = TCHAR('\0');
 
         return ::StrToInt(buf);
     }

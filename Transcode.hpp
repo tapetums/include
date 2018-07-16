@@ -4,7 +4,7 @@
 //
 // Transcode.hpp
 //  文字列エンコード変換関数
-//   Copyright (C) 2014-2016 tapetums
+//   Copyright (C) 2014-2018 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -62,7 +62,7 @@ inline size_t tapetums::MBCSLen(const char8_t* str_u8)
         CP_ACP, 0, tmp, len, nullptr, 0, nullptr, nullptr
     );
 
-    delete tmp;
+    delete[] tmp;
 
     return ret;
 }
@@ -106,7 +106,7 @@ inline size_t tapetums::UTF8Len(const char* str_mbcs)
         CP_UTF8, 0, tmp, len, nullptr, 0, nullptr, nullptr
     );
 
-    delete tmp;
+    delete[] tmp;
 
     return ret;
 }
@@ -178,7 +178,7 @@ inline bool tapetums::toMBCS(const char8_t* str_u8, char* buf, size_t buf_size)
         CP_ACP, 0, tmp, len, buf, (INT32)buf_size, nullptr, nullptr
     );
 
-    delete tmp;
+    delete[] tmp;
 
     return (ret != 0);
 }
@@ -222,7 +222,7 @@ inline bool tapetums::toUTF8(const char* str_mbcs, char8_t* buf, size_t buf_size
         CP_UTF8, 0, tmp, len, (LPSTR)buf, (INT32)buf_size, nullptr, nullptr
     );
 
-    delete tmp;
+    delete[] tmp;
 
     return (ret != 0);
 }

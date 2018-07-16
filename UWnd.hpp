@@ -4,7 +4,7 @@
 //
 // UWnd.hpp
 //  Class to capsulize window objects
-//   Copyright (C) 2005-2017 tapetums
+//   Copyright (C) 2005-2018 tapetums
 //
 //---------------------------------------------------------------------------//
 
@@ -60,7 +60,7 @@ public: // accessors
     HWND handle() const noexcept { return m_hwnd; }
 
 public: // ctor / dtor
-    UWnd();
+    UWnd() noexcept;
     virtual ~UWnd() { Destroy(); }
 
     UWnd(const UWnd&)             = delete;
@@ -123,7 +123,7 @@ public: // window procedures
 // UWnd ctor
 //---------------------------------------------------------------------------//
 
-inline tapetums::UWnd::UWnd()
+inline tapetums::UWnd::UWnd() noexcept
 {
     static ATOM atom { 0 };
     if ( atom == 0 ) { atom = Register(uwnd_class_name); }

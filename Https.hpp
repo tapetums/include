@@ -84,6 +84,7 @@ int main()
 #pragma endregion
 
 #include <thread>
+#include <string>
 #include <vector>
 
 #include <windows.h>
@@ -325,10 +326,7 @@ inline void tapetums::https::request
     std::wstring h = header ? header : L"";
 
     std::vector<uint8_t> d(size);
-    if ( data )
-    {
-        ::memcpy(d.data(), data, size);
-    }
+    if ( data ) { ::memcpy(d.data(), data, size); }
 
     // Forward Data to Thread
     auto thread = std::thread
